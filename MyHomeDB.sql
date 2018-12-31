@@ -1,7 +1,7 @@
 -- --------------------------------------------------------
--- 主机:                           127.0.0.1
--- 服务器版本:                        10.3.11-MariaDB - mariadb.org binary distribution
--- 服务器操作系统:                      Win64
+-- 主机:                           192.168.31.194
+-- 服务器版本:                        10.3.7-MariaDB - Source distribution
+-- 服务器操作系统:                      Linux
 -- HeidiSQL 版本:                  9.4.0.5125
 -- --------------------------------------------------------
 
@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `tn_debit_and_credit` (
   `CR_IN_FLAG` varchar(32) DEFAULT NULL COMMENT '是为借入,否为借出',
   `CN_AMOUNT` decimal(10,2) DEFAULT NULL COMMENT '借贷的金额',
   `CN_DESCRIPTION` varchar(1000) DEFAULT NULL COMMENT '本次借贷的描述信息',
+  `CN_CREATE_DATE` bigint(20) DEFAULT NULL COMMENT '创建日期',
   PRIMARY KEY (`CN_ID`),
   KEY `FK_TN_DEBIT_AND_CREDIT_R_TL_BOOLEAN_ON_CR_IN_FLAG` (`CR_IN_FLAG`),
   CONSTRAINT `FK_TN_DEBIT_AND_CREDIT_R_TL_BOOLEAN_ON_CR_IN_FLAG` FOREIGN KEY (`CR_IN_FLAG`) REFERENCES `tl_boolean` (`CN_ID`) ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -42,6 +43,7 @@ CREATE TABLE IF NOT EXISTS `tn_expenditure` (
   `CR_EXPENDITURE_TYPE_ID` varchar(32) DEFAULT NULL COMMENT '收入类型',
   `CN_AMOUNT` decimal(10,2) DEFAULT NULL COMMENT '金额',
   `CR_PLAN_FLAG` varchar(32) DEFAULT NULL COMMENT '是为计划支出,否为实际支出',
+  `CN_CREATE_DATE` bigint(20) DEFAULT NULL COMMENT '创建日期',
   `CN_DESCRIPTION` varchar(1000) DEFAULT NULL COMMENT '备注',
   PRIMARY KEY (`CN_ID`),
   KEY `FK_TN_EXPENDITURE_R_TN_EXPENDITURE_TYPE` (`CR_EXPENDITURE_TYPE_ID`),
@@ -70,6 +72,7 @@ CREATE TABLE IF NOT EXISTS `tn_income` (
   `CR_INCOME_TYPE_ID` varchar(32) DEFAULT NULL COMMENT '收入类型',
   `CN_AMOUNT` decimal(10,2) DEFAULT NULL COMMENT '金额',
   `CR_PLAN_FLAG` varchar(32) DEFAULT NULL COMMENT '是为计划收入,否为实际收入',
+  `CN_CREATE_DATE` bigint(20) DEFAULT NULL COMMENT '创建日期',
   `CN_DESCRIPTION` varchar(1000) DEFAULT NULL COMMENT '备注',
   PRIMARY KEY (`CN_ID`),
   KEY `FK_TN_INCOME_R_TN_INCOME_TYPE_ON_CR_INCOME_TYPE_ID` (`CR_INCOME_TYPE_ID`),
@@ -86,8 +89,11 @@ CREATE TABLE IF NOT EXISTS `tn_income_type` (
   `CR_PERIODIC_FLAG` varchar(32) DEFAULT NULL COMMENT '是否为周期性收入',
   `CN_EFFECTIVE_DAY` bigint(20) DEFAULT NULL COMMENT '如果是周期性,保存每月的生效日1~31',
   `CN_AMOUNT` decimal(10,2) DEFAULT NULL COMMENT '金额',
+  `CN_FROZEN_FLAG` varchar(32) DEFAULT NULL COMMENT '是否冻结资金,如公积金,定期存折等.',
   PRIMARY KEY (`CN_ID`),
   KEY `FK_TN_INCOME_TYPE_R_BOOLEAN_ON_CR_PERIODIC_FLAG` (`CR_PERIODIC_FLAG`),
+  KEY `FK_TN_INCOME_TYPE_R_BOOLEAN_ON_CR_FROZEN_FLAG` (`CN_FROZEN_FLAG`),
+  CONSTRAINT `FK_TN_INCOME_TYPE_R_BOOLEAN_ON_CR_FROZEN_FLAG` FOREIGN KEY (`CN_FROZEN_FLAG`) REFERENCES `tl_boolean` (`CN_ID`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `FK_TN_INCOME_TYPE_R_BOOLEAN_ON_CR_PERIODIC_FLAG` FOREIGN KEY (`CR_PERIODIC_FLAG`) REFERENCES `tl_boolean` (`CN_ID`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='收入类型';
 
@@ -96,9 +102,13 @@ CREATE TABLE IF NOT EXISTS `tn_income_type` (
 CREATE TABLE IF NOT EXISTS `tn_user` (
   `CN_ID` varchar(32) NOT NULL,
   `CN_NAME` varchar(32) NOT NULL,
-  `CN_LOGIC_NAME` varchar(32) NOT NULL,
+  `CR_ACTIVE_FLAG` varchar(32) NOT NULL,
+  `CN_LOGIN_NAME` varchar(32) NOT NULL,
   `CN_PASSWORD` varchar(32) NOT NULL,
-  PRIMARY KEY (`CN_ID`)
+  `CN_ICO` varchar(300) DEFAULT NULL,
+  PRIMARY KEY (`CN_ID`),
+  KEY `FK_TN_USER_R_TL_BOOLEAN_ON_CR_ACTIVE_FLAG` (`CR_ACTIVE_FLAG`),
+  CONSTRAINT `FK_TN_USER_R_TL_BOOLEAN_ON_CR_ACTIVE_FLAG` FOREIGN KEY (`CR_ACTIVE_FLAG`) REFERENCES `tl_boolean` (`CN_ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户表';
 
 -- 数据导出被取消选择。

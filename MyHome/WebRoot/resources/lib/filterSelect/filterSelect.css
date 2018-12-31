@@ -1,0 +1,65 @@
+.m-input-select {
+	display: inline-block;
+	*display: inline;
+	position: relative;
+	-webkit-user-select: none;
+}
+
+.m-input-select ul, .m-input-select li {
+	padding: 0;
+	margin: 0;
+}
+
+.m-input-select .m-input {
+	padding-right: 22px;
+}
+
+.m-input-select .m-input-ico {
+	position: absolute;
+	right: 0;
+	top: 0;
+	width: 22px;
+	height: 100%;
+	background:
+		url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAATElEQVQoU2NkIBEwkqiegTwNcXFx/4m1CW4DMZoWLVrEiOIkfJpAikGuwPADNk0wxVg1gASRNSErxqkBpgldMV4NuEKNvHggNg5A6gBo4xYmyyXcLAAAAABJRU5ErkJggg==)
+		no-repeat 50% 50%;
+}
+
+.m-input-select .m-list-wrapper {
+	
+}
+
+.m-input-select .m-list {
+	display: none;
+	position: absolute;
+	z-index: 1;
+	top: 100%;
+	left: 0;
+	right: 0;
+	max-width: 100%;
+	max-height: 250px;
+	overflow: auto;
+	border-bottom: 1px solid #ddd;
+}
+
+.m-input-select .m-list-item {
+	color: black;
+	cursor: default;
+	padding: 5px;
+	margin-top: -1px;
+	list-style: none;
+	background: #fff;
+	border: 1px solid #ddd;
+	border-bottom: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.m-input-select .m-list-item:hover {
+	background: #2D95FF;
+}
+
+.m-input-select .m-list-item-active {
+	background: #2D95FF;
+}
