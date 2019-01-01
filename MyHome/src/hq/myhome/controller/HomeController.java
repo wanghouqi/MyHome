@@ -450,7 +450,9 @@ public class HomeController {
 		if (StringUtils.isNotEmpty(delIdJSONArray)) {
 			HashSet<String> hsDelId = new HashSet<String>();
 			for (String delId : delIdJSONArray.split(",")) {
-				hsDelId.add(delId);
+				if (StringUtils.isNotEmpty(delId)) {
+					hsDelId.add(delId);
+				}
 			}
 			this.baseDAO.deleteInId("tn_income", hsDelId);
 			this.baseDAO.deleteInId("tn_expenditure", hsDelId);
