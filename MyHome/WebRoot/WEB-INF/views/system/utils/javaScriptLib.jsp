@@ -26,7 +26,7 @@
 
 
 <script>
-	var contentPath = '<%=path%>';
+	var contextPath = '<%=path%>';
 </script>
 
 <%

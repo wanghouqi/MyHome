@@ -13,8 +13,7 @@
 	RowVO rvoHead = tvoCount.getHeadRowVO();
 %>
 <script>
-
-	
+	// 日历空间
 	layui.use('laydate', function() {
 		var laydate = layui.laydate;
 
@@ -27,10 +26,11 @@
 			format : 'yyyy/MM',
 			value : '<%=yearMonthRange%>',
 			done: function(value, date, endDate){
-				window.location.href = contentPath + "/generaledger?yearMonthRange="+value
+				window.location.href = contextPath + "/generaledger?yearMonthRange="+value
 			}
 		});
 	});
+	// 数据表格
 	layui.use('table', function(){
 	  var table = layui.table;
 	  table.render({
@@ -39,12 +39,39 @@
 	    ,cols: [[ //表头
 	      {field: 'type',  width:90, fixed: 'left'}
 	     <%for (CellVO cvoHead : rvoHead.toCellVOs()) {
-				out.print(",{field: '" + cvoHead.getValue() + "', title: '" + cvoHead.getValue() + "', width:100, align:'right'}");
+				out.print(",{field: '" + cvoHead.getValue() + "', title: '" + cvoHead.getValue()
+						+ "', width:100, align:'right', }");
 			}%>
 	    ]]
 	    ,data: <%=tvoCount.toDataJSONArray()%>
 	  });
+	 
 	});
+
+	/**
+	*	弹出明细数据的修改Layer
+	*	@param typeKey : 当前行类型的key
+	*	@param yearMonth : 当前列的年月 201812
+	*/
+	function modifyDetailData(typeKey, yearMonth){
+		layer.open({
+		  type: 2,
+		  title: '明细数据维护',
+		  shadeClose: true,
+		  shade: 0.8,
+		  area: ['700px', '90%'],
+		  content: contextPath+'/generaledger/modifyDetailData?typeKey='+typeKey+"&yearMonth="+yearMonth //iframe的url
+		  ,end: function(index, layero){ 
+		  	if(needRefreshFlag){
+			  location.reload();// 如果明细有修改,则需要刷新页面.
+		  	}
+		  }  
+		}); 
+	}
+	var needRefreshFlag = false;
+	function needRefresh(flag){
+		needRefreshFlag = flag;
+	}
 </script>
 
 <table style="width:100%;height:100%;border:0px;">
