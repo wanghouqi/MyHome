@@ -61,7 +61,7 @@
 			        saveJSONArray: JSON.stringify(saveJSONArray)
 			    });
 			    window.parent.window.needRefresh(true);// 标识[总账]页面需要刷新
-			    layer.close(index);
+				parent.layer.closeAll();
 			});
 		});
 		

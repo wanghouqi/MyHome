@@ -12,7 +12,7 @@ import hq.myhome.utils.Definition;
 public class LoginCheckInterceptor implements HandlerInterceptor {
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 		Object user = request.getSession().getAttribute(Definition.SESSION_ATTR_KEY_USER);
-		System.out.println("requestURL ===> " + request.getRequestURI());
+		// System.out.println("requestURL ===> " + request.getRequestURI());
 		if (user == null) {
 			request.getSession().setAttribute(Definition.SESSION_ATTR_KEY_ALERT_MSG, "登录超时!!");
 			if (request.getRequestURI().contains("/back/")) {

@@ -82,6 +82,8 @@ public class HomeController {
 		TableVO tvoExpenditureType = this.baseDAO.queryForTableVO("tn_expenditure_type");
 		// 读取所有的收入类型
 		TableVO tvoIncomeType = this.baseDAO.queryForTableVO("tn_income_type");
+		// 读取所有的借贷
+		TableVO tvoDebitAndCredit = this.baseDAO.queryForTableVO("tn_debit_and_credit");
 		int currentYearMonth = Integer.parseInt(sdf.format(new Date()));// 当前年月的整数形201812,用于后面的月份比对
 
 		/*
@@ -130,6 +132,22 @@ public class HomeController {
 		tvoCount.addRowVO(rvoSurplusMonth);
 		tvoCount.addRowVO(rvoSurplusCount);
 		tvoCount.addRowVO(rvoSurplusCash);
+
+		/*
+		 * 处理借贷
+		 */
+		HashMap<String, ArrayList<RowVO>> hmYearMonthToDACRowVO = new HashMap<String, ArrayList<RowVO>>();
+		for (RowVO rowVO : tvoDebitAndCredit.toRowVOs()) {
+			String createDate = rowVO.getCellVOValue("CN_CREATE_DATE");// 创建日期
+			String yearMonth = sdf.format(new Date(Long.parseLong(createDate)));
+			if (hmYearMonthToDACRowVO.containsKey(yearMonth)) {
+				hmYearMonthToDACRowVO.get(yearMonth).add(rowVO);
+			} else {
+				ArrayList<RowVO> al = new ArrayList<RowVO>();
+				al.add(rowVO);
+				hmYearMonthToDACRowVO.put(yearMonth, al);
+			}
+		}
 
 		/*
 		 * 处理支出
@@ -290,13 +308,46 @@ public class HomeController {
 
 			// 累积结余
 			surplusCount = MyDBHelper.doubleAdd(surplusCount, surplusMonth);
-			rvoSurplusCount.addCellVO(new CellVO(yearMonth, surplusCount));
 
 			// 现金结余
 			surplusCash = MyDBHelper.doubleAdd(surplusCash, MyDBHelper.doubleSub(inCash, out));
+
+			/*
+			 * 处理借贷
+			 */
+			if (hmYearMonthToDACRowVO.containsKey(yearMonth)) {
+				for (RowVO rvoDAC : hmYearMonthToDACRowVO.get(yearMonth)) {
+					String inFlag = rvoDAC.getCellVOValue("CR_IN_FLAG");
+					String amount = rvoDAC.getCellVOValue("CN_AMOUNT");
+					if (StringUtils.equals(inFlag, Definition.YES)) {
+						// 借入
+						surplusCount = MyDBHelper.doubleAdd(surplusCount, amount);
+						surplusCash = MyDBHelper.doubleAdd(surplusCash, amount);
+					} else {
+						// 借出
+						surplusCash = MyDBHelper.doubleSub(surplusCash, amount);
+					}
+				}
+			}
+
+			rvoSurplusCount.addCellVO(new CellVO(yearMonth, surplusCount));
 			rvoSurplusCash.addCellVO(new CellVO(yearMonth, surplusCash));
 
 			calFirst.add(Calendar.MONTH, 1);// 加一个月
+		}
+
+		/*
+		 * 处理数字的显示
+		 */
+		for (RowVO rvo : tvoCount.toRowVOs()) {
+			for (CellVO cvo : rvo.toCellVOs()) {
+				try {
+					double v = Double.parseDouble(cvo.getValue());
+					cvo.setValue(MyDBHelper.formatNumber(v, "#,###,##0.00"));
+				} catch (Exception e) {
+					// TODO: handle exception
+				}
+			}
 		}
 
 		// 将汇总数据放入Request
@@ -350,7 +401,20 @@ public class HomeController {
 	@RequestMapping(value = "/generaledger/modifyDetailData", method = RequestMethod.GET)
 	public ModelAndView generaledger_modifyDetailData(HttpServletRequest request) {
 		String typeKey = request.getParameter("typeKey");// planOut | actualOut | planOut | actualOut
+		String type = "不知道";
+		if (StringUtils.equals(typeKey, "planOut")) {
+			type = "<span style='font-weight:bold;color:red;'>计划支出</span>";
+		} else if (StringUtils.equals(typeKey, "actualOut")) {
+			type = "<span style='font-weight:bold;color:red;'>实际支出</span>";
+		} else if (StringUtils.equals(typeKey, "planIn")) {
+			type = "<span style='font-weight:bold;color:green;'>计划收入</span>";
+		} else if (StringUtils.equals(typeKey, "actualIn")) {
+			type = "<span style='font-weight:bold;color:green;'>实际收入</span>";
+		}
 		String yearMonth = request.getParameter("yearMonth"); // yyyyMM
+
+		request.setAttribute("yearMonth", yearMonth);
+		request.setAttribute("type", type);
 
 		// 读取所有的支出类型
 		TableVO tvoExpenditureType = this.baseDAO.queryForTableVO("tn_expenditure_type");
@@ -415,7 +479,7 @@ public class HomeController {
 		}
 
 		// 排序
-		tvoReturn.sortByColumn(new Sort("createDate"), new Sort("typeName"));
+		tvoReturn.sortByColumn(new Sort("typeName"), new Sort("createDate"));
 
 		/*
 		 * 处理页面显示
@@ -476,7 +540,7 @@ public class HomeController {
 			tvoSave.addRowVO(rvo);
 			rvo.addCellVO(new CellVO("CN_ID", joSave.getString("id")));
 			rvo.addCellVO(new CellVO("CN_CREATE_DATE", "" + MyDBHelper.getDatetime(joSave.getString("createDate"), "yyyy-MM-dd")));
-			rvo.addCellVO(new CellVO("CN_AMOUNT", joSave.getString("amount")));
+			rvo.addCellVO(new CellVO("CN_AMOUNT", MyDBHelper.formatNumber(Double.parseDouble(joSave.getString("amount")), "########.####")));
 		}
 		tvoSave.setKey("tn_income");
 		this.baseDAO.saveOrUpdateTableVO(tvoSave);
@@ -545,7 +609,7 @@ public class HomeController {
 			fvoSave.addCellVO(new CellVO("CR_EXPENDITURE_TYPE_ID", typeId));
 		}
 		fvoSave.addCellVO(new CellVO("CN_CREATE_DATE", "" + MyDBHelper.getDatetime(createDate, "yyyy-MM-dd")));
-		fvoSave.addCellVO(new CellVO("CN_AMOUNT", amount));
+		fvoSave.addCellVO(new CellVO("CN_AMOUNT", MyDBHelper.formatNumber(Double.parseDouble(amount), "########.####")));
 		fvoSave.addCellVO(new CellVO("CN_DESCRIPTION", desc));
 		if (StringUtils.equals(planFlag, Definition.YES)) {
 			fvoSave.addCellVO(new CellVO("CR_PLAN_FLAG", Definition.YES));

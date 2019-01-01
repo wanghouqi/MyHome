@@ -40,7 +40,7 @@
 	      {field: 'type',  width:90, fixed: 'left'}
 	     <%for (CellVO cvoHead : rvoHead.toCellVOs()) {
 				out.print(",{field: '" + cvoHead.getValue() + "', title: '" + cvoHead.getValue()
-						+ "', width:100, align:'right', }");
+						+ "', width:110, align:'right', }");
 			}%>
 	    ]]
 	    ,data: <%=tvoCount.toDataJSONArray()%>
@@ -63,7 +63,7 @@
 		  content: contextPath+'/generaledger/modifyDetailData?typeKey='+typeKey+"&yearMonth="+yearMonth //iframe的url
 		  ,end: function(index, layero){ 
 		  	if(needRefreshFlag){
-			  location.reload();// 如果明细有修改,则需要刷新页面.
+		  		setTimeout(function(){location.reload();},500); // 如果明细有修改,则需要刷新页面.
 		  	}
 		  }  
 		}); 
@@ -82,7 +82,7 @@
 		  content: contextPath+'/generaledger/newDetailData' //iframe的url
 		  ,end: function(index, layero){ 
 		  	if(needRefreshFlag){
-			  location.reload();// 如果明细有修改,则需要刷新页面.
+		  		setTimeout(function(){location.reload();},500); // 如果明细有修改,则需要刷新页面.
 		  	}
 		  }  
 		}); 

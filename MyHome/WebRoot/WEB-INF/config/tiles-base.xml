@@ -22,6 +22,7 @@
 	</definition>
 	<!-- 总账页面 - 修改明细数据 -->
 	<definition name="tiles.layer.generaledger.modifyDetailData" extends="tiles.layer">
+		<put-attribute name="header" value="/WEB-INF/views/myHome/generaledger_modifyDetailData_head.jsp" />
 		<put-attribute name="body" value="/WEB-INF/views/myHome/generaledger_modifyDetailData.jsp" />
 	</definition>
 	<!-- 总账页面 - 新增明细数据 -->

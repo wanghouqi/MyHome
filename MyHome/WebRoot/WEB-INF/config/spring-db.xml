@@ -60,6 +60,6 @@
 		<!-- 所有的表必须有一个唯一的主键,这里指定主键的栏位名,主键为nvchar(32) UUID -->
 		<property name="primaryKeyColumnName" value="CN_ID" />
 		<!-- 是否显示SQL -->
-		<property name="showSQL" value="true" />
+		<property name="showSQL" value="false" />
 	</bean>
 </beans>
