@@ -1,6 +1,7 @@
 package hq.myhome.controller;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.alibaba.fastjson.JSONArray;
@@ -21,6 +23,7 @@ import com.alibaba.fastjson.JSONObject;
 import hq.mydb.condition.CondSetBean;
 import hq.mydb.dao.BaseDAO;
 import hq.mydb.data.CellVO;
+import hq.mydb.data.FormVO;
 import hq.mydb.data.RowVO;
 import hq.mydb.data.TableVO;
 import hq.mydb.orderby.Sort;
@@ -442,7 +445,7 @@ public class HomeController {
 	 * @return
 	 */
 	@RequestMapping(value = "/generaledger/modifyDetailData/delete", method = RequestMethod.POST)
-	public void generaledger_modifyDetailData_delete(HttpServletRequest request) {
+	public @ResponseBody void generaledger_modifyDetailData_delete(HttpServletRequest request) {
 		String delIdJSONArray = request.getParameter("delIdJSONArray");
 		if (StringUtils.isNotEmpty(delIdJSONArray)) {
 			HashSet<String> hsDelId = new HashSet<String>();
@@ -459,7 +462,7 @@ public class HomeController {
 	 * @return
 	 */
 	@RequestMapping(value = "/generaledger/modifyDetailData/save", method = RequestMethod.POST)
-	public void generaledger_modifyDetailData_save(HttpServletRequest request) {
+	public @ResponseBody void generaledger_modifyDetailData_save(HttpServletRequest request) {
 		String saveJSONArray = request.getParameter("saveJSONArray");
 		JSONArray jaSave = JSONArray.parseArray(saveJSONArray);
 
@@ -478,4 +481,77 @@ public class HomeController {
 		tvoSave.setKey("tn_expenditure");
 		this.baseDAO.saveOrUpdateTableVO(tvoSave);
 	}
+
+	/**
+	 * 总账页面 - 新增收支
+	 * @return
+	 */
+	@RequestMapping(value = "/generaledger/newDetailData", method = RequestMethod.GET)
+	public ModelAndView generaledger_newDetailData(HttpServletRequest request) {
+		// 读取所有的支出类型
+		TableVO tvoExpenditureType = this.baseDAO.queryForTableVO("tn_expenditure_type");
+		// 读取所有的收入类型
+		TableVO tvoIncomeType = this.baseDAO.queryForTableVO("tn_income_type");
+
+		tvoExpenditureType.sortByColumn(new Sort("CN_NAME"));
+		tvoIncomeType.sortByColumn(new Sort("CN_NAME"));
+
+		TableVO tvoReturn = new TableVO();
+		for (RowVO rvo : tvoExpenditureType.toRowVOs()) {
+			String name = rvo.getCellVOValue("CN_NAME");
+			rvo.setCellVOValue("CN_NAME", "支出 - " + name);
+			tvoReturn.addRowVO(rvo);
+		}
+		for (RowVO rvo : tvoIncomeType.toRowVOs()) {
+			String name = rvo.getCellVOValue("CN_NAME");
+			rvo.setCellVOValue("CN_NAME", "收入 - " + name);
+			tvoReturn.addRowVO(rvo);
+		}
+		request.setAttribute("tvoReturn", tvoReturn);
+
+		// 跳转到[总账页面-明细数据修改页]
+		ModelAndView mv = new ModelAndView();
+		mv.setViewName("tiles.layer.generaledger.newDetailData");
+		return mv;
+	}
+
+	/**
+	 * 总账页面 - 新增收支 - 保存
+	 * @return
+	 */
+	@RequestMapping(value = "/generaledger/newDetailData/save", method = RequestMethod.POST)
+	public @ResponseBody void generaledger_newDetailData_save(HttpServletRequest request) {
+		String typeId = request.getParameter("typeId");
+		String createDate = request.getParameter("createDate");
+		String planFlag = request.getParameter("planFlag");
+		String amount = request.getParameter("amount");
+		String desc = request.getParameter("desc");
+		if (StringUtils.isEmpty(amount)) {
+			return;
+		}
+
+		// 读取所有的收入类型
+		TableVO tvoIncomeType = this.baseDAO.queryForTableVO("tn_income_type");
+		ArrayList<String> alIncomeTypeId = tvoIncomeType.toArrayListOfCellVOValue("CN_ID");
+
+		FormVO fvoSave = new FormVO();
+		if (alIncomeTypeId.contains(typeId)) {
+			fvoSave.setKey("tn_income");
+			fvoSave.addCellVO(new CellVO("CR_INCOME_TYPE_ID", typeId));
+		} else {
+			fvoSave.setKey("tn_expenditure");
+			fvoSave.addCellVO(new CellVO("CR_EXPENDITURE_TYPE_ID", typeId));
+		}
+		fvoSave.addCellVO(new CellVO("CN_CREATE_DATE", "" + MyDBHelper.getDatetime(createDate, "yyyy-MM-dd")));
+		fvoSave.addCellVO(new CellVO("CN_AMOUNT", amount));
+		fvoSave.addCellVO(new CellVO("CN_DESCRIPTION", desc));
+		if (StringUtils.equals(planFlag, Definition.YES)) {
+			fvoSave.addCellVO(new CellVO("CR_PLAN_FLAG", Definition.YES));
+		} else {
+			fvoSave.addCellVO(new CellVO("CR_PLAN_FLAG", Definition.NO));
+		}
+
+		this.baseDAO.saveOrUpdateFormVO(fvoSave);
+	}
+
 }

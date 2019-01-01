@@ -68,6 +68,29 @@
 		  }  
 		}); 
 	}
+	
+	/**
+	*	弹出明细数据的新增Layer
+	*/
+	function newDetailData(){
+		layer.open({
+		  type: 2,
+		  title: '明细数据新增',
+		  shadeClose: true,
+		  shade: 0.8,
+		  area: ['700px', '95%'],
+		  content: contextPath+'/generaledger/newDetailData' //iframe的url
+		  ,end: function(index, layero){ 
+		  	if(needRefreshFlag){
+			  location.reload();// 如果明细有修改,则需要刷新页面.
+		  	}
+		  }  
+		}); 
+	}
+	
+	/**
+	*	弹出子页时,如果有修改记录则需要刷新
+	*/
 	var needRefreshFlag = false;
 	function needRefresh(flag){
 		needRefreshFlag = flag;
@@ -84,7 +107,7 @@
 					<input type="text" style="height:20px;" class="layui-input" id="yearMonthRange" placeholder=" - ">
 				</div>
 			</div>
-			<button class="layui-btn layui-btn-xs" type="button">添加收支</button>
+			<button class="layui-btn layui-btn-xs" type="button" onclick="newDetailData()">添加收支</button>
 		</td>
 	</tr>
 	<!-- 表格 -->

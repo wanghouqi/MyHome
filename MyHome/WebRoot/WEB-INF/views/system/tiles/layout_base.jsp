@@ -58,7 +58,7 @@ td {
 		
 		<div class="layui-body" style="left:0px;">
 			<!-- 页面内容 -->
-			<form id="sysForm" name="sysForm" action="" method="post">
+			<form class="layui-form" id="sysForm" name="sysForm" action="" method="post">
 				<t:insertAttribute name="body" />
 			</form>
 		</div>

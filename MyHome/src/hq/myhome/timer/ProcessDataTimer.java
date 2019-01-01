@@ -21,6 +21,7 @@ import hq.myhome.utils.Definition;
  */
 public class ProcessDataTimer extends TimerTask {
 	BaseDAO baseDAO;
+	public static boolean isFirst = true;// 用于处理系统启动时,当前系统时间已经过了设定时间时,立刻执行的问题.
 
 	public ProcessDataTimer(BaseDAO baseDAO) {
 		this.baseDAO = baseDAO;
@@ -28,6 +29,10 @@ public class ProcessDataTimer extends TimerTask {
 
 	public void run() {
 		try {
+			if (ProcessDataTimer.isFirst) {
+				ProcessDataTimer.isFirst = false;
+				return;// 用于处理系统启动时,当前系统时间已经过了设定时间时,立刻执行的问题.
+			}
 			TableVO tvoExpenditure = new TableVO("tn_expenditure");// 支出
 			TableVO tvoIncome = new TableVO("tn_income");// 收入
 			long currentTime_long = System.currentTimeMillis();
