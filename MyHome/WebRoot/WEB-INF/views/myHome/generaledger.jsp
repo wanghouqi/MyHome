@@ -59,7 +59,7 @@
 		  title: '明细数据维护',
 		  shadeClose: true,
 		  shade: 0.8,
-		  area: ['700px', '90%'],
+		  area: ['750px', '90%'],
 		  content: contextPath+'/generaledger/modifyDetailData?typeKey='+typeKey+"&yearMonth="+yearMonth //iframe的url
 		  ,end: function(index, layero){ 
 		  	if(needRefreshFlag){
