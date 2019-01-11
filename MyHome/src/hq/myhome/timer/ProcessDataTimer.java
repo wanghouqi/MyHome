@@ -1,9 +1,8 @@
 package hq.myhome.timer;
 
-import java.util.Date;
 import java.util.TimerTask;
 
-import org.apache.commons.codec.binary.StringUtils;
+import org.apache.commons.lang.StringUtils;
 
 import hq.mydb.dao.BaseDAO;
 import hq.mydb.data.CellVO;
@@ -81,6 +80,15 @@ public class ProcessDataTimer extends TimerTask {
 			 */
 			// 支出
 			for (RowVO rvoExpenditureType : tvoExpenditureType.toRowVOs()) {
+				String startDate = rvoExpenditureType.getCellVOValue("CN_START_DATE");
+				String endDate = rvoExpenditureType.getCellVOValue("CN_END_DATE");
+				if (StringUtils.isNotEmpty(startDate) && Long.parseLong(startDate) > currentTime_long) {
+					continue;
+				}
+				if (StringUtils.isNotEmpty(endDate) && Long.parseLong(endDate) < currentTime_long) {
+					continue;
+				}
+
 				String expenditureTypeId = rvoExpenditureType.getCellVOValue("CN_ID");
 				String periodicFlag = rvoExpenditureType.getCellVOValue("CR_PERIODIC_FLAG");
 				String effectiveDay = rvoExpenditureType.getCellVOValue("CN_EFFECTIVE_DAY");

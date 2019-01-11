@@ -1,5 +1,5 @@
 -- --------------------------------------------------------
--- 主机:                           192.168.31.194
+-- 主机:                           y23141394i.imwork.net
 -- 服务器版本:                        10.3.7-MariaDB - Source distribution
 -- 服务器操作系统:                      Linux
 -- HeidiSQL 版本:                  9.4.0.5125
@@ -23,7 +23,13 @@ CREATE TABLE IF NOT EXISTS `tl_boolean` (
   PRIMARY KEY (`CN_ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='部位类型,记录是|否';
 
--- 数据导出被取消选择。
+-- 正在导出表  myhome.tl_boolean 的数据：~2 rows (大约)
+/*!40000 ALTER TABLE `tl_boolean` DISABLE KEYS */;
+INSERT INTO `tl_boolean` (`CN_ID`, `CN_NAME`) VALUES
+	('no', 'no'),
+	('yes', 'yes');
+/*!40000 ALTER TABLE `tl_boolean` ENABLE KEYS */;
+
 -- 导出  表 myhome.tn_debit_and_credit 结构
 CREATE TABLE IF NOT EXISTS `tn_debit_and_credit` (
   `CN_ID` varchar(32) NOT NULL,
@@ -60,6 +66,8 @@ CREATE TABLE IF NOT EXISTS `tn_expenditure_type` (
   `CR_PERIODIC_FLAG` varchar(32) DEFAULT NULL COMMENT '是否为周期性支出',
   `CN_EFFECTIVE_DAY` bigint(20) DEFAULT NULL COMMENT '如果是周期性,保存每月的生效日1~31',
   `CN_AMOUNT` decimal(10,2) DEFAULT NULL COMMENT '金额',
+  `CN_START_DATE` bigint(20) DEFAULT NULL COMMENT '如果是周期性,保存开始周期开始日期',
+  `CN_END_DATE` bigint(20) DEFAULT NULL COMMENT '如果是周期性,保存开始周期结束日期',
   PRIMARY KEY (`CN_ID`),
   KEY `FK_TN_EXPENDITURE_TYPE_R_BOOLEAN_ON_CR_PERIODIC_FLAG` (`CR_PERIODIC_FLAG`),
   CONSTRAINT `FK_TN_EXPENDITURE_TYPE_R_BOOLEAN_ON_CR_PERIODIC_FLAG` FOREIGN KEY (`CR_PERIODIC_FLAG`) REFERENCES `tl_boolean` (`CN_ID`) ON DELETE NO ACTION ON UPDATE NO ACTION
