@@ -31,4 +31,17 @@
 	</definition>
 
 
+	<!-- 收入类型列表页 -->
+	<definition name="tiles.incomeType.list" extends="tiles.base">
+		<put-attribute name="body" value="/WEB-INF/views/other/incomeTypeList.jsp" />
+	</definition>
+	<!-- 支出类型列表页 -->
+	<definition name="tiles.expenditureType.list" extends="tiles.base">
+		<put-attribute name="body" value="/WEB-INF/views/other/expenditureTypeList.jsp" />
+	</definition>
+	<!-- 借贷列表页 -->
+	<definition name="tiles.debitAndCredit.list" extends="tiles.base">
+		<put-attribute name="body" value="/WEB-INF/views/other/debitAndCreditList.jsp" />
+	</definition>
+
 </tiles-definitions>  

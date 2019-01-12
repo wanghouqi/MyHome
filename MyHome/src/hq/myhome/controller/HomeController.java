@@ -91,6 +91,9 @@ public class HomeController {
 			long currentTime_long = System.currentTimeMillis();// 当前系统时间
 			// 得到现金收入的类型 
 			HashSet<String> hsCashInTypeId = tvoIncomeType.toHashMapOfToCellVOValueSet("CN_FROZEN_FLAG", "CN_ID").get(Definition.NO);
+			if(hsCashInTypeId == null){
+				hsCashInTypeId = new HashSet<String>();
+			}
 
 			// group by Month
 			HashMap<String, ArrayList<RowVO>> hmYearMonthToPlanInRowVOArray = new HashMap<String, ArrayList<RowVO>>();
