@@ -2,18 +2,18 @@ package hq.myhome.controller;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
-
-import com.alibaba.fastjson.JSONObject;
 
 import hq.mydb.dao.BaseDAO;
 import hq.mydb.data.RowVO;
 import hq.mydb.data.TableVO;
+import hq.mydb.orderby.OrderBy;
+import hq.mydb.orderby.Sort;
 import hq.mydb.utils.MyDBHelper;
 
 /**
@@ -43,7 +43,12 @@ public class OtherController {
 	@RequestMapping(value = "/incomeType/list", method = RequestMethod.GET)
 	public ModelAndView incomeTypeList(HttpServletRequest request) {
 		try {
-			TableVO tvoReturn = this.baseDAO.queryForTableVO("tn_income_type");
+			OrderBy ob = new OrderBy();
+			ob.addSort(new Sort("CN_FROZEN_FLAG"));
+			ob.addSort(new Sort("CR_PERIODIC_FLAG", Sort.DESC));
+			ob.addSort(new Sort("CN_EFFECTIVE_DAY"));
+			ob.addSort(new Sort("CN_NAME"));
+			TableVO tvoReturn = this.baseDAO.queryForTableVO("tn_income_type", ob);
 			for (RowVO rv : tvoReturn.toRowVOs()) {
 				rv.get("CN_ID").setKey("id");
 				rv.get("CN_NAME").setKey("name");
@@ -72,7 +77,11 @@ public class OtherController {
 	@RequestMapping(value = "/expenditureType/list", method = RequestMethod.GET)
 	public ModelAndView expenditureTypeList(HttpServletRequest request) {
 		try {
-			TableVO tvoReturn = this.baseDAO.queryForTableVO("tn_expenditure_type");
+			OrderBy ob = new OrderBy();
+			ob.addSort(new Sort("CR_PERIODIC_FLAG", Sort.DESC));
+			ob.addSort(new Sort("CN_EFFECTIVE_DAY"));
+			ob.addSort(new Sort("CN_NAME"));
+			TableVO tvoReturn = this.baseDAO.queryForTableVO("tn_expenditure_type", ob);
 			for (RowVO rv : tvoReturn.toRowVOs()) {
 				rv.get("CN_ID").setKey("id");
 				rv.get("CN_NAME").setKey("name");
@@ -82,8 +91,12 @@ public class OtherController {
 				rv.get("CN_START_DATE").setKey("startDate");
 				rv.get("CN_END_DATE").setKey("endDate");
 
-				rv.setCellVOValue("startDate", MyDBHelper.formatDate(Long.parseLong(rv.getCellVOValue("startDate"))));
-				rv.setCellVOValue("endDate", MyDBHelper.formatDate(Long.parseLong(rv.getCellVOValue("endDate"))));
+				if (StringUtils.isNotEmpty(rv.getCellVOValue("startDate"))) {
+					rv.setCellVOValue("startDate", MyDBHelper.formatDate(Long.parseLong(rv.getCellVOValue("startDate"))));
+				}
+				if (StringUtils.isNotEmpty(rv.getCellVOValue("endDate"))) {
+					rv.setCellVOValue("endDate", MyDBHelper.formatDate(Long.parseLong(rv.getCellVOValue("endDate"))));
+				}
 			}
 			// 将汇总数据放入Request
 			request.setAttribute("tvoReturn", tvoReturn);
@@ -105,7 +118,9 @@ public class OtherController {
 	@RequestMapping(value = "/debitAndCredit/list", method = RequestMethod.GET)
 	public ModelAndView debitAndCreditList(HttpServletRequest request) {
 		try {
-			TableVO tvoReturn = this.baseDAO.queryForTableVO("tn_debit_and_credit");
+			OrderBy ob = new OrderBy();
+			ob.addSort(new Sort("CN_CREATE_DATE"));
+			TableVO tvoReturn = this.baseDAO.queryForTableVO("tn_debit_and_credit", ob);
 			for (RowVO rv : tvoReturn.toRowVOs()) {
 				rv.get("CN_ID").setKey("id");
 				rv.get("CR_IN_FLAG").setKey("inFlag");
@@ -113,7 +128,9 @@ public class OtherController {
 				rv.get("CN_CREATE_DATE").setKey("createDate");
 				rv.get("CN_AMOUNT").setKey("amount");
 
-				rv.setCellVOValue("createDate", MyDBHelper.formatDate(Long.parseLong(rv.getCellVOValue("createDate"))));
+				if (StringUtils.isNotEmpty(rv.getCellVOValue("createDate"))) {
+					rv.setCellVOValue("createDate", MyDBHelper.formatDate(Long.parseLong(rv.getCellVOValue("createDate"))));
+				}
 			}
 			// 将汇总数据放入Request
 			request.setAttribute("tvoReturn", tvoReturn);
