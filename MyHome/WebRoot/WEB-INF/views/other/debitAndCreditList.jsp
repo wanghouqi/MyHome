@@ -16,7 +16,7 @@
 				,title : '明细数据维护'
 			    ,cols: [[ //表头
 			      {type:'numbers'}
-			     ,{field: 'inFlag', title:'借入',  width:110}
+			     ,{field: 'typeName', title:'类型',  width:110}
 			     ,{field: 'createDate', title:'创建日期',  width:130}
 			     ,{field: 'amount', title:'金额',  width:110}
 			     ,{field: 'desc', title:'描述'}

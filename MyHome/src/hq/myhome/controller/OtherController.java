@@ -10,11 +10,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.ModelAndView;
 
 import hq.mydb.dao.BaseDAO;
+import hq.mydb.data.CellVO;
 import hq.mydb.data.RowVO;
 import hq.mydb.data.TableVO;
 import hq.mydb.orderby.OrderBy;
 import hq.mydb.orderby.Sort;
 import hq.mydb.utils.MyDBHelper;
+import hq.myhome.utils.Definition;
 
 /**
  * 创建处理主页以外的内容的控制权
@@ -123,11 +125,14 @@ public class OtherController {
 			TableVO tvoReturn = this.baseDAO.queryForTableVO("tn_debit_and_credit", ob);
 			for (RowVO rv : tvoReturn.toRowVOs()) {
 				rv.get("CN_ID").setKey("id");
-				rv.get("CR_IN_FLAG").setKey("inFlag");
 				rv.get("CN_DESCRIPTION").setKey("desc");
 				rv.get("CN_CREATE_DATE").setKey("createDate");
 				rv.get("CN_AMOUNT").setKey("amount");
-
+				if(StringUtils.equals(Definition.YES, rv.getCellVOValue("CR_IN_FLAG"))){
+					rv.addCellVO(new CellVO("typeName","<font color='red'>借入</font>"));
+				}else{
+					rv.addCellVO(new CellVO("typeName","<font color='green'>借出</font>"));
+				}
 				if (StringUtils.isNotEmpty(rv.getCellVOValue("createDate"))) {
 					rv.setCellVOValue("createDate", MyDBHelper.formatDate(Long.parseLong(rv.getCellVOValue("createDate"))));
 				}
