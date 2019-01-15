@@ -1,5 +1,7 @@
 package hq.myhome.controller;
 
+import java.util.HashMap;
+
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang.StringUtils;
@@ -58,6 +60,15 @@ public class OtherController {
 				rv.get("CN_EFFECTIVE_DAY").setKey("effectiveDay");
 				rv.get("CN_AMOUNT").setKey("amount");
 				rv.get("CN_FROZEN_FLAG").setKey("frozenFlag");
+
+				if (StringUtils.equals(Definition.YES, rv.getCellVOValue("periodicFlag"))) {
+					rv.setCellVOValue("periodicFlag", "是");
+				} else {
+					rv.setCellVOValue("periodicFlag", "否");
+				}
+				if (StringUtils.isNotBlank(rv.getCellVOValue("effectiveDay"))) {
+					rv.setCellVOValue("effectiveDay", "每月" + rv.getCellVOValue("effectiveDay") + "号");
+				}
 			}
 			// 将汇总数据放入Request
 			request.setAttribute("tvoReturn", tvoReturn);
@@ -99,6 +110,15 @@ public class OtherController {
 				if (StringUtils.isNotEmpty(rv.getCellVOValue("endDate"))) {
 					rv.setCellVOValue("endDate", MyDBHelper.formatDate(Long.parseLong(rv.getCellVOValue("endDate"))));
 				}
+
+				if (StringUtils.equals(Definition.YES, rv.getCellVOValue("periodicFlag"))) {
+					rv.setCellVOValue("periodicFlag", "是");
+				} else {
+					rv.setCellVOValue("periodicFlag", "否");
+				}
+				if (StringUtils.isNotBlank(rv.getCellVOValue("effectiveDay"))) {
+					rv.setCellVOValue("effectiveDay", "每月" + rv.getCellVOValue("effectiveDay") + "号");
+				}
 			}
 			// 将汇总数据放入Request
 			request.setAttribute("tvoReturn", tvoReturn);
@@ -128,10 +148,10 @@ public class OtherController {
 				rv.get("CN_DESCRIPTION").setKey("desc");
 				rv.get("CN_CREATE_DATE").setKey("createDate");
 				rv.get("CN_AMOUNT").setKey("amount");
-				if(StringUtils.equals(Definition.YES, rv.getCellVOValue("CR_IN_FLAG"))){
-					rv.addCellVO(new CellVO("typeName","<font color='red'>借入</font>"));
-				}else{
-					rv.addCellVO(new CellVO("typeName","<font color='green'>借出</font>"));
+				if (StringUtils.equals(Definition.YES, rv.getCellVOValue("CR_IN_FLAG"))) {
+					rv.addCellVO(new CellVO("typeName", "<font color='red'>借入</font>"));
+				} else {
+					rv.addCellVO(new CellVO("typeName", "<font color='green'>借出</font>"));
 				}
 				if (StringUtils.isNotEmpty(rv.getCellVOValue("createDate"))) {
 					rv.setCellVOValue("createDate", MyDBHelper.formatDate(Long.parseLong(rv.getCellVOValue("createDate"))));
