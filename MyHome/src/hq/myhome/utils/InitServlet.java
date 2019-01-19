@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 
 import hq.mydb.dao.BaseDAO;
 import hq.mydb.utils.MyDBHelper;
+import hq.myhome.timer.DataBaseKeepLiveTimer;
 import hq.myhome.timer.ProcessDataTimer;
 
 public class InitServlet {
@@ -24,6 +25,7 @@ public class InitServlet {
 		try {
 			Timer timer = new Timer();
 			timer.schedule(new ProcessDataTimer(baseDAO), new Date(MyDBHelper.getFirstTimeOfDay(new Date().getTime())), 24 * 60 * 60 * 1000);
+			timer.schedule(new DataBaseKeepLiveTimer(baseDAO), new Date(), 3 * 60 * 60 * 1000);
 
 			log.info("成功启动ProcessDataTimer");
 		} catch (Exception e) {
