@@ -68,6 +68,26 @@
 		  }  
 		}); 
 	}
+
+	/**
+	*	弹出当月结余明细数据的Layer
+	*	@param yearMonth : 当前列的年月 201812
+	*/
+	function surplusMonthDetail(yearMonth){
+		layer.open({
+		  type: 2,
+		  title: '明细数据维护',
+		  shadeClose: true,
+		  shade: 0.8,
+		  area: ['845px', '90%'],
+		  content: contextPath+'/generaledger/surplusMonthDetail?yearMonth='+yearMonth //iframe的url
+		  ,end: function(index, layero){ 
+		  	if(needRefreshFlag){
+		  		setTimeout(function(){location.reload();},500); // 如果明细有修改,则需要刷新页面.
+		  	}
+		  }  
+		}); 
+	}
 	
 	/**
 	*	弹出明细数据的新增Layer

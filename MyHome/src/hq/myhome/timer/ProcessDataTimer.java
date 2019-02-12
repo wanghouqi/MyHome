@@ -76,7 +76,8 @@ public class ProcessDataTimer extends TimerTask {
 			}
 
 			/*
-			 * 2. 将计划支出和收入的生效日期等于当前的计划生成对应的实际支出或收入.
+			 * 2.生成周期性的实际收入或支出 记录.
+			 * 	将计划支出和收入的生效日期等于当前的计划生成对应的实际支出或收入.
 			 */
 			// 支出
 			for (RowVO rvoExpenditureType : tvoExpenditureType.toRowVOs()) {

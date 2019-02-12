@@ -25,6 +25,11 @@
 		<put-attribute name="header" value="/WEB-INF/views/myHome/generaledger_modifyDetailData_head.jsp" />
 		<put-attribute name="body" value="/WEB-INF/views/myHome/generaledger_modifyDetailData.jsp" />
 	</definition>
+	<!-- 总账页面 - 当月结余明细 -->
+	<definition name="tiles.layer.generaledger.surplusMonthDetail" extends="tiles.layer">
+		<put-attribute name="header" value="/WEB-INF/views/myHome/generaledger_modifyDetailData_head.jsp" />
+		<put-attribute name="body" value="/WEB-INF/views/myHome/generaledger_surplusMonthDetail.jsp" />
+	</definition>
 	<!-- 总账页面 - 新增明细数据 -->
 	<definition name="tiles.layer.generaledger.newDetailData" extends="tiles.layer">
 		<put-attribute name="body" value="/WEB-INF/views/myHome/generaledger_newDetailData.jsp" />
