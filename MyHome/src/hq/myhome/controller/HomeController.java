@@ -514,14 +514,14 @@ public class HomeController {
 						if (StringUtils.equals("type", cvo.getKey())) {
 							continue;
 						}
-						cvo.setValue("<div sytle='width:100%;' onclick=\"modifyDetailData('" + typeKey + "','" + cvo.getKey() + "')\">" + cvo.getValue() + "</div>");
+						cvo.setValue("<div sytle='height: 100%;cursor:pointer;border-bottom: 1px dashed blue;' onclick=\"modifyDetailData('" + typeKey + "','" + cvo.getKey() + "')\">" + cvo.getValue() + "</div>");
 					}
 				} else if (type.contains("当月结余")) {
 					for (CellVO cvo : rvo.toCellVOs()) {
 						if (StringUtils.equals("type", cvo.getKey())) {
 							continue;
 						}
-						cvo.setValue("<div sytle='width:100%;' onclick=\"surplusMonthDetail('" + cvo.getKey() + "')\">" + cvo.getValue() + "</div>");
+						cvo.setValue("<div sytle='height: 100%;cursor:pointer;border-bottom: 1px dashed blue;' onclick=\"surplusMonthDetail('" + cvo.getKey() + "')\">" + cvo.getValue() + "</div>");
 					}
 				}
 			}
