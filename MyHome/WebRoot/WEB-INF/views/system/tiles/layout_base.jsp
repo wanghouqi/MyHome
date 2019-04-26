@@ -30,6 +30,10 @@ body {
 td {
 	border: 0px;
 }
+
+.layui-form-checkbox i{
+	margin-top: 6px;
+}
 </style>
 
 <script>
