@@ -27,6 +27,7 @@
 			     ,{field: 'amount', title:'金额',  width:110}
 			     ,{field: 'desc', title:'描述',  width:310}
 			    ]]
+			    ,limit: <%=tvoReturn.size()%> //显示的数量
 			    ,data: <%=tvoReturn.toDataJSONArray()%>
 			    ,done: function(res, curr, count){
 			    	// 将没有记录的,只是用于显示的预告信息处理为只读显示.
