@@ -11,6 +11,7 @@
 
 	TableVO tvoCount = (TableVO) request.getAttribute("tvoCount");
 	RowVO rvoHead = tvoCount.getHeadRowVO();
+	
 %>
 <script>
 	// 日历空间
@@ -53,17 +54,17 @@
 	*	@param typeKey : 当前行类型的key
 	*	@param yearMonth : 当前列的年月 201812
 	*/
-	function modifyDetailData(typeKey, yearMonth){
+	function modifyDetailData(typeKey, cvoHashCode){
 		layer.open({
 		  type: 2,
 		  title: '明细数据维护',
 		  shadeClose: true,
 		  shade: 0.8,
 		  area: ['750px', '90%'],
-		  content: contextPath+'/generaledger/modifyDetailData?typeKey='+typeKey+"&yearMonth="+yearMonth //iframe的url
+		  content: contextPath+'/generaledger/modifyDetailData?typeKey='+typeKey+'&cvoHashCode='+cvoHashCode //iframe的url
 		  ,end: function(index, layero){ 
 		  	if(needRefreshFlag){
-		  		setTimeout(function(){location.reload();},500); // 如果明细有修改,则需要刷新页面.
+		  		setTimeout(function(){window.location.href = contextPath+'/generaledger';},1500); // 如果明细有修改,则需要刷新页面.
 		  	}
 		  }  
 		}); 
@@ -73,14 +74,14 @@
 	*	弹出当月结余明细数据的Layer
 	*	@param yearMonth : 当前列的年月 201812
 	*/
-	function surplusMonthDetail(yearMonth){
+	function surplusMonthDetail(typeKey, cvoHashCode){
 		layer.open({
 		  type: 2,
 		  title: '明细数据维护',
 		  shadeClose: true,
 		  shade: 0.8,
 		  area: ['845px', '90%'],
-		  content: contextPath+'/generaledger/surplusMonthDetail?yearMonth='+yearMonth //iframe的url
+		  content: contextPath+'/generaledger/surplusMonthDetail?typeKey='+typeKey+'&cvoHashCode='+cvoHashCode //iframe的url
 		  ,end: function(index, layero){ 
 		  	if(needRefreshFlag){
 		  		setTimeout(function(){location.reload();},500); // 如果明细有修改,则需要刷新页面.

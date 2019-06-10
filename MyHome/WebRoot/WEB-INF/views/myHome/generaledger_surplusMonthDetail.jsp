@@ -19,8 +19,8 @@
 			     ,{field: 'inOut', title:'收支',  width:60}
 			     ,{field: 'typeName', title:'类型',  width:110}
 			     ,{field: 'createDate', title:'日期',  width:105}
-			     ,{field: 'amount_plan', title:'金额(计划)',  width:110}
-			     ,{field: 'amount_actual', title:'金额(实际)',  width:110}
+			     ,{field: 'amount', title:'金额',  width:110}
+			     ,{field: 'planOrActual', title:'计划|实际',  width:110}
 			     ,{field: 'desc', title:'描述',  width:310}
 			    ]]
 			    ,data: <%=tvoReturn.toDataJSONArray()%>

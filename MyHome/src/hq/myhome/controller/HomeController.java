@@ -23,6 +23,7 @@ import com.alibaba.fastjson.JSONObject;
 import hq.mydb.condition.CondSetBean;
 import hq.mydb.dao.BaseDAO;
 import hq.mydb.data.CellVO;
+import hq.mydb.data.DataVO;
 import hq.mydb.data.FormVO;
 import hq.mydb.data.RowVO;
 import hq.mydb.data.TableVO;
@@ -33,6 +34,7 @@ import hq.myhome.utils.exception.MyHomeException;
 
 /**
  * 创建Homepage的控制器
+ * 
  * @author Administrator
  *
  */
@@ -43,6 +45,7 @@ public class HomeController {
 
 	/**
 	 * 加载BaseDAO
+	 * 
 	 * @param baseDAO
 	 */
 	@Autowired
@@ -52,6 +55,7 @@ public class HomeController {
 
 	/**
 	 * 主页
+	 * 
 	 * @return
 	 */
 	@RequestMapping(value = "/", method = RequestMethod.GET)
@@ -60,12 +64,21 @@ public class HomeController {
 	}
 
 	/**
+	 * 偷懒的写法.每次刷新页面就缓存这里.
+	 * 如果把整个dvoCountDetail弄成JSONObject放给HTML文件太大,需要处理.
+	 * 非常少人非常少数据,所以懒得仔细处理.
+	 */
+	private static DataVO dvoCountDetail = new DataVO();// 记录tvoCount中每一个CellVO的数据值有哪些[交易记录]组成的.
+
+	/**
 	 * 总账页面
+	 * 
 	 * @return
 	 */
 	@RequestMapping(value = "/generaledger", method = RequestMethod.GET)
 	public ModelAndView generaledger(HttpServletRequest request) {
 		try {
+			dvoCountDetail = new DataVO();
 			String yearMonthRange = request.getParameter("yearMonthRange");
 			if (StringUtils.isEmpty(yearMonthRange)) {
 				yearMonthRange = MyDBHelper.formatDate(MyDBHelper.getFirstDayOfYear(new Date().getTime()), "yyyy/MM") + " - "
@@ -76,6 +89,20 @@ public class HomeController {
 			String endMonth = yearMonthRange.split(" - ")[1];
 			SimpleDateFormat sdf_yearMonth = new SimpleDateFormat("yyyyMM");
 			SimpleDateFormat sdf_date = new SimpleDateFormat("yyyyMMdd");
+			long currentTime_long = System.currentTimeMillis();// 当前系统时间
+
+			Calendar calFirst = Calendar.getInstance();
+			Calendar calStart = Calendar.getInstance();
+			Calendar calEnd = Calendar.getInstance();
+			try {
+				calFirst.setTime(sdf_yearMonth.parse("201810"));// 从2018年10月开始记账
+				calStart.setTime(sdf_yearMonth.parse(startMonth.replace("/", "")));// 页面查询的开始时间
+				calEnd.setTime(sdf_yearMonth.parse(endMonth.replace("/", "")));// 页面查询的结束时间
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw new MyHomeException(e);
+			}
+
 			// 读取所有的支出记录
 			TableVO tvoExpenditure = this.baseDAO.queryForTableVO("tn_expenditure");
 			// 读取所有的收入记录
@@ -86,91 +113,8 @@ public class HomeController {
 			TableVO tvoIncomeType = this.baseDAO.queryForTableVO("tn_income_type");
 			// 读取所有的借贷
 			TableVO tvoDebitAndCredit = this.baseDAO.queryForTableVO("tn_debit_and_credit");
-			int currentYearMonth = Integer.parseInt(sdf_yearMonth.format(new Date()));// 当前年月的整数形201812,用于后面的月份比对
-			long currentTime_long = System.currentTimeMillis();// 当前系统时间
-			// 得到现金收入的类型 
-			HashSet<String> hsCashInTypeId = tvoIncomeType.toHashMapOfToCellVOValueSet("CN_FROZEN_FLAG", "CN_ID").get(Definition.NO);
-			if (hsCashInTypeId == null) {
-				hsCashInTypeId = new HashSet<String>();
-			}
-
-			// group by Month
-			HashMap<String, ArrayList<RowVO>> hmYearMonthToPlanInRowVOArray = new HashMap<String, ArrayList<RowVO>>();
-			HashMap<String, ArrayList<RowVO>> hmYearMonthToActualInRowVOArray = new HashMap<String, ArrayList<RowVO>>();
-			HashMap<String, ArrayList<RowVO>> hmYearMonthToPlanOutRowVOArray = new HashMap<String, ArrayList<RowVO>>();
-			HashMap<String, ArrayList<RowVO>> hmYearMonthToActualOutRowVOArray = new HashMap<String, ArrayList<RowVO>>();
-			for (RowVO rowVO : tvoIncome.toRowVOs()) {
-				String planFlag = rowVO.getCellVOValue("CR_PLAN_FLAG");// 是为计划支出,否为实际支出
-				String createDate = rowVO.getCellVOValue("CN_CREATE_DATE");// 创建日期
-				String yearMonth = sdf_yearMonth.format(new Date(Long.parseLong(createDate)));
-				if (StringUtils.equals(planFlag, Definition.YES)) {
-					// 处理计划收入
-					if (hmYearMonthToPlanInRowVOArray.containsKey(yearMonth)) {
-						hmYearMonthToPlanInRowVOArray.get(yearMonth).add(rowVO);
-					} else {
-						ArrayList<RowVO> al = new ArrayList<RowVO>();
-						al.add(rowVO);
-						hmYearMonthToPlanInRowVOArray.put(yearMonth, al);
-					}
-				} else {
-					// 处理计划收入
-					if (hmYearMonthToActualInRowVOArray.containsKey(yearMonth)) {
-						hmYearMonthToActualInRowVOArray.get(yearMonth).add(rowVO);
-					} else {
-						ArrayList<RowVO> al = new ArrayList<RowVO>();
-						al.add(rowVO);
-						hmYearMonthToActualInRowVOArray.put(yearMonth, al);
-					}
-				}
-			}
-			for (RowVO rowVO : tvoExpenditure.toRowVOs()) {
-				String planFlag = rowVO.getCellVOValue("CR_PLAN_FLAG");// 是为计划支出,否为实际支出
-				String createDate = rowVO.getCellVOValue("CN_CREATE_DATE");// 创建日期
-				String yearMonth = sdf_yearMonth.format(new Date(Long.parseLong(createDate)));
-				if (StringUtils.equals(planFlag, Definition.YES)) {
-					// 处理计划支出
-					if (hmYearMonthToPlanOutRowVOArray.containsKey(yearMonth)) {
-						hmYearMonthToPlanOutRowVOArray.get(yearMonth).add(rowVO);
-					} else {
-						ArrayList<RowVO> al = new ArrayList<RowVO>();
-						al.add(rowVO);
-						hmYearMonthToPlanOutRowVOArray.put(yearMonth, al);
-					}
-				} else {
-					// 处理计划支出
-					if (hmYearMonthToActualOutRowVOArray.containsKey(yearMonth)) {
-						hmYearMonthToActualOutRowVOArray.get(yearMonth).add(rowVO);
-					} else {
-						ArrayList<RowVO> al = new ArrayList<RowVO>();
-						al.add(rowVO);
-						hmYearMonthToActualOutRowVOArray.put(yearMonth, al);
-					}
-				}
-			}
-
-			TableVO tvoCount = new TableVO();// 记录汇总信息
-			// 处理数据
-			RowVO rvoPlanOut = new RowVO("planOut", RowVO.OPERATION_UNDEFINED); // 计划支出    
-			RowVO rvoActualOut = new RowVO("actualOut", RowVO.OPERATION_UNDEFINED); // 实际支出    
-			RowVO rvoOutDeviation = new RowVO("outDeviation", RowVO.OPERATION_UNDEFINED); // 支出偏差    
-			RowVO rvoPlanIn = new RowVO("planIn", RowVO.OPERATION_UNDEFINED); // 计划收入    
-			RowVO rvoActualIn = new RowVO("actualIn", RowVO.OPERATION_UNDEFINED); // 实际收入    
-			RowVO rvoPlanInCash = new RowVO("planInCash", RowVO.OPERATION_UNDEFINED); // 计划现金收入    
-			RowVO rvoActualInCash = new RowVO("actualInCash", RowVO.OPERATION_UNDEFINED); // 实际现金收入    
-			RowVO rvoSurplusMonth = new RowVO("surplusMonth", RowVO.OPERATION_UNDEFINED); // 当月结余    
-			RowVO rvoSurplusCount = new RowVO("surplusCount", RowVO.OPERATION_UNDEFINED); // 累积结余    
-			RowVO rvoSurplusCash = new RowVO("surplusCash", RowVO.OPERATION_UNDEFINED); // 现金结余    
-			tvoCount.addRowVO(rvoPlanOut);
-			tvoCount.addRowVO(rvoActualOut);
-			tvoCount.addRowVO(rvoOutDeviation);
-			tvoCount.addRowVO(rvoPlanIn);
-			tvoCount.addRowVO(rvoActualIn);
-			//		tvoCount.addRowVO(rvoPlanInCash);
-			//		tvoCount.addRowVO(rvoActualInCash);
-			tvoCount.addRowVO(rvoSurplusMonth);
-			tvoCount.addRowVO(rvoSurplusCount);
-			tvoCount.addRowVO(rvoSurplusCash);
-
+			HashMap<String, String> hmTypeIdToName = tvoExpenditureType.toHashMapOfToCellVOValue("CN_ID", "CN_NAME");
+			hmTypeIdToName.putAll(tvoIncomeType.toHashMapOfToCellVOValue("CN_ID", "CN_NAME"));
 			/*
 			 * 处理借贷
 			 */
@@ -186,149 +130,68 @@ public class HomeController {
 					hmYearMonthToDACRowVO.put(yearMonth, al);
 				}
 			}
+			// 得到现金收入的类型
+			HashSet<String> hsCashInTypeId = tvoIncomeType.toHashMapOfToCellVOValueSet("CN_FROZEN_FLAG", "CN_ID").get(Definition.NO);
+			if (hsCashInTypeId == null) {
+				hsCashInTypeId = new HashSet<String>();
+			}
 
 			/*
-			 * 计算[支出偏差][当月结余][累积结余][现金结余]
+			 * 将所有的收支合并到一个TableVO中,并且一句[创建时间][是否实际]进行排序
 			 */
-			String surplusCount = "0";// 累积结余
-			String surplusCash = "0";// 现金结余
-			Calendar calFirst = Calendar.getInstance();
-			Calendar calStart = Calendar.getInstance();
-			Calendar calEnd = Calendar.getInstance();
-			try {
-				calFirst.setTime(sdf_yearMonth.parse("201810"));// 从2018年10月开始记账
-				calStart.setTime(sdf_yearMonth.parse(startMonth.replace("/", "")));// 页面查询的开始时间
-				calEnd.setTime(sdf_yearMonth.parse(endMonth.replace("/", "")));// 页面查询的结束时间
-			} catch (Exception e) {
-				e.printStackTrace();
-				throw new MyHomeException(e);
+			TableVO tvoData = new TableVO();// 记录所有的收支(实际&预告)
+			ArrayList<String> alKey_existPlan = new ArrayList<String>();// 记录已经有生成过[计划]记录的类型
+			// 收入
+			for (RowVO rowVO : tvoIncome.toRowVOs()) {
+				String id = rowVO.getCellVOValue("CN_ID");
+				String planFlag = rowVO.getCellVOValue("CR_PLAN_FLAG");// 是为计划支出,否为实际支出
+				String createDate = rowVO.getCellVOValue("CN_CREATE_DATE");// 创建日期
+				String typeId = rowVO.getCellVOValue("CR_INCOME_TYPE_ID");// 收入类型
+				String amount = rowVO.getCellVOValue("CN_AMOUNT");// 金额
+				String desc = rowVO.getCellVOValue("CN_DESCRIPTION");// 描述
+
+				tvoData.addRowVO(this.generaledger_buildDataRowVO(id, planFlag, createDate, typeId, amount, Definition.YES, hmTypeIdToName.get(typeId), desc));
+
+				if (StringUtils.equals(planFlag, Definition.YES)) {
+					String key_existPlan = typeId + "_" + sdf_yearMonth.format(new Date(Long.parseLong(createDate)));// 类型 + 月份
+					alKey_existPlan.add(key_existPlan);
+				}
 			}
+			// 支出
+			for (RowVO rowVO : tvoExpenditure.toRowVOs()) {
+				String id = rowVO.getCellVOValue("CN_ID");
+				String planFlag = rowVO.getCellVOValue("CR_PLAN_FLAG");// 是为计划支出,否为实际支出
+				String createDate = rowVO.getCellVOValue("CN_CREATE_DATE");// 创建日期
+				String typeId = rowVO.getCellVOValue("CR_EXPENDITURE_TYPE_ID");// 支出类型
+				String amount = rowVO.getCellVOValue("CN_AMOUNT");// 金额
+				String desc = rowVO.getCellVOValue("CN_DESCRIPTION");// 描述
+
+				tvoData.addRowVO(this.generaledger_buildDataRowVO(id, planFlag, createDate, typeId, amount, Definition.NO, hmTypeIdToName.get(typeId), desc));
+
+				if (StringUtils.equals(planFlag, Definition.YES)) {
+					String key_existPlan = typeId + "_" + sdf_yearMonth.format(new Date(Long.parseLong(createDate)));
+					alKey_existPlan.add(key_existPlan);
+				}
+			}
+
 			RowVO rvoHead = new RowVO();// 根据用户选择的月份区间生成的头信息
-			tvoCount.setHeadRowVO(rvoHead);
-			while (calFirst.getTimeInMillis() <= calEnd.getTimeInMillis()) {
-				String yearMonth = sdf_yearMonth.format(calFirst.getTime());
+			// 周期性预计支出和收入
+			Calendar calLoop = Calendar.getInstance();
+			calLoop.setTime(calFirst.getTime());
+			while (calLoop.getTimeInMillis() <= calEnd.getTimeInMillis()) {
+				String yearMonth = sdf_yearMonth.format(calLoop.getTime());
+
 				// 处理Head
-				if (calFirst.getTimeInMillis() >= calStart.getTimeInMillis()) {
+				if (calLoop.getTimeInMillis() >= calStart.getTimeInMillis()) {
 					rvoHead.addCellVO(new CellVO(yearMonth, yearMonth));
 				}
-
-				String planOut = "0"; // 计划支出
-				String actualOut = "0";// 实际支出
-				String planIn = "0";// 计划收入
-				String actualIn = "0";// 实际收入
-				String planInCash = "0";// 计划收入现金
-				String actualInCash = "0";// 实际收入现金
-
-				TableVO tvoMonth = new TableVO();// 记录当月所有的收支,用于计算结余
-
-				/*
-				 * 计划支出
-				 */
-				HashSet<String> hsExistOutTypeId = new HashSet<String>();// 记录当月已经生成计划支出记录的支出类型
-				if (hmYearMonthToPlanOutRowVOArray.containsKey(yearMonth)) {
-					for (RowVO rvo : hmYearMonthToPlanOutRowVOArray.get(yearMonth)) {
-						String typeId = rvo.getCellVOValue("CR_EXPENDITURE_TYPE_ID");// 支出类型
-						String amount = rvo.getCellVOValue("CN_AMOUNT");// 金额
-						planOut = MyDBHelper.doubleAdd(planOut, amount);
-						hsExistOutTypeId.add(typeId);
-						// 当月所有的收支
-						RowVO rvoMonth = new RowVO();
-						tvoMonth.addRowVO(rvoMonth);
-						rvoMonth.addCellVO(new CellVO("actualPlan", "2"));// 实际 1 | 计划 2
-						rvoMonth.addCellVO(new CellVO("isOut", Definition.YES));
-						rvoMonth.addCellVO(new CellVO("typeId", typeId));
-						rvoMonth.addCellVO(new CellVO("amount", amount));
-					}
-				}
-				for (RowVO rvo : tvoExpenditureType.toRowVOs()) {
-					String periodicFlag = rvo.getCellVOValue("CR_PERIODIC_FLAG");// 是否为周期性支出
-					if (!StringUtils.equals(Definition.YES, periodicFlag)) {
-						continue;
-					}
-
-					String typeId = rvo.getCellVOValue("CN_ID");
-					String startDate = rvo.getCellVOValue("CN_START_DATE");
-					String endDate = rvo.getCellVOValue("CN_END_DATE");
-					if (hsExistOutTypeId.contains(typeId)) {
-						continue;// 过滤 - 当前类型已经生成预告记录
-					}
-					if (StringUtils.isNotEmpty(startDate) && Long.parseLong(startDate) > currentTime_long) {
-						continue;// 过滤 - 没到开始时间
-					}
-					if (StringUtils.isNotEmpty(endDate) && Long.parseLong(endDate) < currentTime_long) {
-						continue;// 过滤 - 超过结束时间
-					}
-
-					String effectiveDay = rvo.getCellVOValue("CN_EFFECTIVE_DAY");// 生效日期
-					String amount = rvo.getCellVOValue("CN_AMOUNT");
-					if (Integer.parseInt(effectiveDay) < 10) {
-						effectiveDay = yearMonth + "0" + effectiveDay;
-					} else {
-						effectiveDay = yearMonth + effectiveDay;
-					}
-					if (sdf_date.parse(effectiveDay).getTime() > currentTime_long) {
-						// 将生效日期大于当前日期的周期行预告加入汇总
-						planOut = MyDBHelper.doubleAdd(planOut, amount);
-						// 当月所有的收支
-						RowVO rvoMonth = new RowVO();
-						tvoMonth.addRowVO(rvoMonth);
-						rvoMonth.addCellVO(new CellVO("actualPlan", "2"));// 实际 1 | 计划 2
-						rvoMonth.addCellVO(new CellVO("isOut", Definition.YES));
-						rvoMonth.addCellVO(new CellVO("typeId", typeId));
-						rvoMonth.addCellVO(new CellVO("amount", amount));
-					}
-				}
-
-				/*
-				 * 实际支出
-				 */
-				if (hmYearMonthToActualOutRowVOArray.containsKey(yearMonth)) {
-					for (RowVO rvo : hmYearMonthToActualOutRowVOArray.get(yearMonth)) {
-						String typeId = rvo.getCellVOValue("CR_EXPENDITURE_TYPE_ID");// 支出类型
-						String amount = rvo.getCellVOValue("CN_AMOUNT");// 金额
-						actualOut = MyDBHelper.doubleAdd(actualOut, amount);
-						// 当月所有的收支
-						RowVO rvoMonth = new RowVO();
-						tvoMonth.addRowVO(rvoMonth);
-						rvoMonth.addCellVO(new CellVO("actualPlan", "1"));// 实际 1 | 计划 2
-						rvoMonth.addCellVO(new CellVO("isOut", Definition.YES));
-						rvoMonth.addCellVO(new CellVO("typeId", typeId));
-						rvoMonth.addCellVO(new CellVO("amount", amount));
-					}
-				}
-
-				/*
-				 * 计划收入
-				 */
-				HashSet<String> hsExistInTypeId = new HashSet<String>();// 记录当月已经生成计划收入记录的收入类型
-				if (hmYearMonthToPlanInRowVOArray.containsKey(yearMonth)) {
-					for (RowVO rvo : hmYearMonthToPlanInRowVOArray.get(yearMonth)) {
-						String typeId = rvo.getCellVOValue("CR_INCOME_TYPE_ID");// 收入类型
-						String amount = rvo.getCellVOValue("CN_AMOUNT");// 金额
-						planIn = MyDBHelper.doubleAdd(planIn, amount);
-						if (hsCashInTypeId.contains(typeId)) {
-							planInCash = MyDBHelper.doubleAdd(planInCash, amount);
-						}
-						hsExistInTypeId.add(typeId);
-						// 当月所有的收支
-						RowVO rvoMonth = new RowVO();
-						tvoMonth.addRowVO(rvoMonth);
-						rvoMonth.addCellVO(new CellVO("actualPlan", "2"));// 实际 1 | 计划 2
-						rvoMonth.addCellVO(new CellVO("isOut", Definition.NO));
-						rvoMonth.addCellVO(new CellVO("typeId", typeId));
-						rvoMonth.addCellVO(new CellVO("amount", amount));
-					}
-				}
+				// 收入
 				for (RowVO rvo : tvoIncomeType.toRowVOs()) {
 					String periodicFlag = rvo.getCellVOValue("CR_PERIODIC_FLAG");// 是否为周期性收入
-					if (!StringUtils.equals(Definition.YES, periodicFlag)) {
-						continue;
-					}
-					String typeId = rvo.getCellVOValue("CN_ID");
 					String startDate = rvo.getCellVOValue("CN_START_DATE");
 					String endDate = rvo.getCellVOValue("CN_END_DATE");
-					if (hsExistInTypeId.contains(typeId)) {
-						continue;// 过滤 - 当前类型已经生成预告记录
+					if (!StringUtils.equals(Definition.YES, periodicFlag)) {
+						continue;
 					}
 					if (StringUtils.isNotEmpty(startDate) && Long.parseLong(startDate) > currentTime_long) {
 						continue;// 过滤 - 没到开始时间
@@ -337,100 +200,123 @@ public class HomeController {
 						continue;// 过滤 - 超过结束时间
 					}
 
+					String typeId = rvo.getCellVOValue("CN_ID");
 					String effectiveDay = rvo.getCellVOValue("CN_EFFECTIVE_DAY");// 生效日期
 					String amount = rvo.getCellVOValue("CN_AMOUNT");
+					String createDate = "";// yyyyMMdd
 					if (Integer.parseInt(effectiveDay) < 10) {
-						effectiveDay = yearMonth + "0" + effectiveDay;
+						createDate = yearMonth + "0" + effectiveDay;
 					} else {
-						effectiveDay = yearMonth + effectiveDay;
+						createDate = yearMonth + effectiveDay;
 					}
-					if (sdf_date.parse(effectiveDay).getTime() > currentTime_long) {
-						// 将生效日期大于当前日期的周期行预告加入汇总
-						planIn = MyDBHelper.doubleAdd(planIn, amount);
-						if (hsCashInTypeId.contains(typeId)) {
-							planInCash = MyDBHelper.doubleAdd(planInCash, amount);
-						}
-						// 当月所有的收支
-						RowVO rvoMonth = new RowVO();
-						tvoMonth.addRowVO(rvoMonth);
-						rvoMonth.addCellVO(new CellVO("actualPlan", "2"));// 实际 1 | 计划 2
-						rvoMonth.addCellVO(new CellVO("isOut", Definition.NO));
-						rvoMonth.addCellVO(new CellVO("typeId", typeId));
-						rvoMonth.addCellVO(new CellVO("amount", amount));
+					String createDate_long = String.valueOf(sdf_date.parse(createDate).getTime());// 13位lang值
+					String key_existPlan = typeId + "_" + sdf_yearMonth.format(new Date(Long.parseLong(createDate_long)));// 类型 + 月份
+					if (alKey_existPlan.contains(key_existPlan)) {
+						continue;// 过滤 - 已有实际交易记录
 					}
+
+					tvoData.addRowVO(this.generaledger_buildDataRowVO("", Definition.YES, createDate_long, typeId, amount, Definition.YES, hmTypeIdToName.get(typeId), ""));
 				}
 
-				/*
-				 * 实际收入
-				 */
-				if (hmYearMonthToActualInRowVOArray.containsKey(yearMonth)) {
-					for (RowVO rvo : hmYearMonthToActualInRowVOArray.get(yearMonth)) {
-						String typeId = rvo.getCellVOValue("CR_INCOME_TYPE_ID");// 收入类型
-						String amount = rvo.getCellVOValue("CN_AMOUNT");// 金额
-						actualIn = MyDBHelper.doubleAdd(actualIn, amount);
-						if (hsCashInTypeId.contains(typeId)) {
-							actualInCash = MyDBHelper.doubleAdd(actualInCash, amount);
-						}
-						// 当月所有的收支
-						RowVO rvoMonth = new RowVO();
-						tvoMonth.addRowVO(rvoMonth);
-						rvoMonth.addCellVO(new CellVO("actualPlan", "1"));// 实际 1 | 计划 2
-						rvoMonth.addCellVO(new CellVO("isOut", Definition.NO));
-						rvoMonth.addCellVO(new CellVO("typeId", typeId));
-						rvoMonth.addCellVO(new CellVO("amount", amount));
+				// 支出
+				for (RowVO rvo : tvoExpenditureType.toRowVOs()) {
+					String periodicFlag = rvo.getCellVOValue("CR_PERIODIC_FLAG");// 是否为周期性支出
+					String startDate = rvo.getCellVOValue("CN_START_DATE");
+					String endDate = rvo.getCellVOValue("CN_END_DATE");
+					if (!StringUtils.equals(Definition.YES, periodicFlag)) {
+						continue;
 					}
+					if (StringUtils.isNotEmpty(startDate) && Long.parseLong(startDate) > currentTime_long) {
+						continue;// 过滤 - 没到开始时间
+					}
+					if (StringUtils.isNotEmpty(endDate) && Long.parseLong(endDate) < currentTime_long) {
+						continue;// 过滤 - 超过结束时间
+					}
+
+					String typeId = rvo.getCellVOValue("CN_ID");
+					String effectiveDay = rvo.getCellVOValue("CN_EFFECTIVE_DAY");// 生效日期
+					String amount = rvo.getCellVOValue("CN_AMOUNT");
+					String createDate = "";// yyyyMMdd
+					if (Integer.parseInt(effectiveDay) < 10) {
+						createDate = yearMonth + "0" + effectiveDay;
+					} else {
+						createDate = yearMonth + effectiveDay;
+					}
+					String createDate_long = String.valueOf(sdf_date.parse(createDate).getTime());// 13位lang值
+					String key_existPlan = typeId + "_" + sdf_yearMonth.format(new Date(Long.parseLong(createDate_long)));// 类型 + 月份
+					if (alKey_existPlan.contains(key_existPlan)) {
+						continue;// 过滤 - 已有实际交易记录
+					}
+
+					tvoData.addRowVO(this.generaledger_buildDataRowVO("", Definition.YES, createDate_long, typeId, amount, Definition.NO, hmTypeIdToName.get(typeId), ""));
 				}
 
-				// 处理支出偏差    
-				String deviation = "0.0";
-				if (Double.parseDouble(planOut) > 0) {
-					deviation = MyDBHelper.doubleDiv(actualOut, planOut);
-					if (Double.parseDouble(deviation) == 1) {
-						deviation = "0.0";
-					}
-				}
+				calLoop.add(Calendar.MONTH, 1);// 加一个月
+			}
 
-				/*
-				 * 结余计算
-				 *  当前月份之前的月份使用实际数据,当前月份以及之后的月份使用预告数据
-				 */
-				String surplusMonth = "0";
-				if (Integer.parseInt(yearMonth) < currentYearMonth) {
-					// 处理当月结余
-					surplusMonth = MyDBHelper.doubleSub(actualIn, actualOut);
-					// 累积结余
-					surplusCount = MyDBHelper.doubleAdd(surplusCount, surplusMonth);
-					// 现金结余
-					surplusCash = MyDBHelper.doubleAdd(surplusCash, MyDBHelper.doubleSub(actualInCash, actualOut));
+			// 对数据Table进行排序 [创建时间][是否实际]
+			tvoData.sortByColumn(new Sort("createDate"), new Sort("planFlag"), new Sort("typeId"));
+
+			// 开始进行汇总数的计算
+			TableVO tvoCount = new TableVO();// 记录汇总信息
+			tvoCount.setHeadRowVO(rvoHead);
+			ArrayList<String> alKey_existActual = new ArrayList<String>();// 记录已经有生成过[实际]记录的类型
+			for (RowVO rvoData : tvoData.toRowVOs()) {
+				boolean isPlan = StringUtils.equals(rvoData.getCellVOValue("planFlag"), Definition.YES);
+				boolean isIncome = StringUtils.equals(rvoData.getCellVOValue("isIncome"), Definition.YES);
+				String createDate = rvoData.getCellVOValue("createDate");
+				String typeId = rvoData.getCellVOValue("typeId");
+				String yearMonth = sdf_yearMonth.format(new Date(Long.parseLong(createDate)));
+
+				String key_yearMonth = typeId + "_" + yearMonth;// 类型 + 月份
+
+				// 得到当前YearMonth的每行的CellVO
+				CellVO cvoPlanOut = this.generaledger_getCellVO(tvoCount, "planOut", yearMonth); //计划支出
+				CellVO cvoActualOut = this.generaledger_getCellVO(tvoCount, "actualOut", yearMonth); //实际支出
+				CellVO cvoPlanIn = this.generaledger_getCellVO(tvoCount, "planIn", yearMonth); //计划收入
+				CellVO cvoActualIn = this.generaledger_getCellVO(tvoCount, "actualIn", yearMonth); //实际收入
+				CellVO cvoSurplusMonth = this.generaledger_getCellVO(tvoCount, "surplusMonth", yearMonth); //当月结余
+				CellVO cvoSurplusMonthCash = this.generaledger_getCellVO(tvoCount, "surplusMonthCash", yearMonth); //当月结余(现金)
+
+				if (isPlan) {
+					if (isIncome) {
+						// 汇总 - 计划收入
+						this.generaledger_countCalculate(dvoCountDetail, cvoPlanIn, rvoData, true);
+					} else {
+						// 汇总 - 计划支出
+						this.generaledger_countCalculate(dvoCountDetail, cvoPlanOut, rvoData, true);
+					}
 				} else {
-					tvoMonth.sortByColumn(new Sort("actualPlan"));// 排序,实际在前在计划后 实际 1 | 计划 2
-					HashSet<String> actualTypeId = new HashSet<String>();// 记录有实际收支的收支类型,用于计算结余时过滤同类型计划收支记录.
-					for (RowVO rvoMonth : tvoMonth.toRowVOs()) {
-						String actualPlan = rvoMonth.getCellVOValue("actualPlan");// 实际 1 | 计划 2
-						String isOut = rvoMonth.getCellVOValue("isOut");
-						String typeId = rvoMonth.getCellVOValue("typeId");
-						String amount = rvoMonth.getCellVOValue("amount");
-						if (StringUtils.equals(actualPlan, "1")) {
-							actualTypeId.add(typeId);
-						} else if (actualTypeId.contains(typeId)) {
-							continue;// 已经有实际的收支,则过滤掉计划
-						}
-						if (StringUtils.equals(isOut, Definition.YES)) {
-							// 当月结余
-							surplusMonth = MyDBHelper.doubleSub(surplusMonth, amount);
-							// 累积结余
-							surplusCount = MyDBHelper.doubleSub(surplusCount, amount);
-							// 现金结余
-							surplusCash = MyDBHelper.doubleSub(surplusCash, amount);
-						} else {
-							// 当月结余
-							surplusMonth = MyDBHelper.doubleAdd(surplusMonth, amount);
-							// 累积结余
-							surplusCount = MyDBHelper.doubleAdd(surplusCount, amount);
-							// 现金结余
-							surplusCash = MyDBHelper.doubleAdd(surplusCash, amount);
-						}
+					// 处理有[实际]类型的key
+					alKey_existActual.add(key_yearMonth);
+
+					if (isIncome) {
+						// 汇总 - 实际收入
+						this.generaledger_countCalculate(dvoCountDetail, cvoActualIn, rvoData, true);
+					} else {
+						// 汇总 - 实际支出
+						this.generaledger_countCalculate(dvoCountDetail, cvoActualOut, rvoData, true);
 					}
+				}
+
+				// 处理累计
+				if (isPlan && (alKey_existActual.contains(key_yearMonth) || currentTime_long > Long.parseLong(createDate))) {
+					continue;// 过滤计划记录,当前月份的计划已经生成了实际记录或当前已经已经过了计划日期的的记录都不参与汇总.
+				}
+
+				// 汇总 - 当月结余
+				if (hsCashInTypeId.contains(typeId)) {
+					// 收入 - 累积(现金)
+					this.generaledger_countCalculate(dvoCountDetail, cvoSurplusMonthCash, rvoData, true);
+				}
+				if (isIncome) {
+					// 收入 - 累积
+					this.generaledger_countCalculate(dvoCountDetail, cvoSurplusMonth, rvoData, true);
+				} else {
+					// 支出 - 累积
+					this.generaledger_countCalculate(dvoCountDetail, cvoSurplusMonth, rvoData, false);
+					// 支出 - 累积(现金)
+					this.generaledger_countCalculate(dvoCountDetail, cvoSurplusMonthCash, rvoData, false);
 				}
 
 				/*
@@ -438,31 +324,66 @@ public class HomeController {
 				 */
 				if (hmYearMonthToDACRowVO.containsKey(yearMonth)) {
 					for (RowVO rvoDAC : hmYearMonthToDACRowVO.get(yearMonth)) {
+						String id = rvoDAC.getCellVOValue("CN_ID");
 						String inFlag = rvoDAC.getCellVOValue("CR_IN_FLAG");
 						String amount = rvoDAC.getCellVOValue("CN_AMOUNT");
+						String createDate_t = rvoDAC.getCellVOValue("CN_CREATE_DATE");// 创建日期
+						String desc = rvoDAC.getCellVOValue("CN_DESCRIPTION");
 						if (StringUtils.equals(inFlag, Definition.YES)) {
-							// 借入
-							surplusCount = MyDBHelper.doubleAdd(surplusCount, amount);
-							surplusCash = MyDBHelper.doubleAdd(surplusCash, amount);
+							// 借入,现金和累积都增加
+							RowVO rvoDACData = this.generaledger_buildDataRowVO(id, Definition.NO, createDate_t, "借入", amount, inFlag, "借入", desc);
+							// 借入 - 累积
+							this.generaledger_countCalculate(dvoCountDetail, cvoSurplusMonth, rvoDACData, true);
+							// 借入 - 累积(现金)
+							this.generaledger_countCalculate(dvoCountDetail, cvoSurplusMonthCash, rvoDACData, true);
 						} else {
-							// 借出
-							surplusCash = MyDBHelper.doubleSub(surplusCash, amount);
+							// 借出, 只减少现金,累积资产是不变的.
+							RowVO rvoDACData = this.generaledger_buildDataRowVO(id, Definition.NO, createDate_t, "借出", amount, inFlag, "借出", desc);
+							// 借出 - 累积(现金)
+							this.generaledger_countCalculate(dvoCountDetail, cvoSurplusMonthCash, rvoDACData, false);
 						}
 					}
+					hmYearMonthToDACRowVO.remove(yearMonth);
 				}
+			}
 
-				rvoPlanOut.addCellVO(new CellVO(yearMonth, planOut));
-				rvoActualOut.addCellVO(new CellVO(yearMonth, actualOut));
-				rvoOutDeviation.addCellVO(new CellVO(yearMonth, deviation));
-				rvoPlanIn.addCellVO(new CellVO(yearMonth, planIn));
-				rvoActualIn.addCellVO(new CellVO(yearMonth, actualIn));
-				rvoPlanInCash.addCellVO(new CellVO(yearMonth, planInCash));
-				rvoActualInCash.addCellVO(new CellVO(yearMonth, actualInCash));
-				rvoSurplusMonth.addCellVO(new CellVO(yearMonth, surplusMonth));
-				rvoSurplusCount.addCellVO(new CellVO(yearMonth, surplusCount));
-				rvoSurplusCash.addCellVO(new CellVO(yearMonth, surplusCash));
+			// 支出偏差
+			for (CellVO cvoPlanOut : tvoCount.get("planOut").toCellVOs()) {
+				String yearMonth = cvoPlanOut.getKey();
+				CellVO cvoActualOut = this.generaledger_getCellVO(tvoCount, "actualOut", yearMonth); //实际支出
+				CellVO cvoOutDeviation = this.generaledger_getCellVO(tvoCount, "outDeviation", yearMonth); //支出偏差
 
-				calFirst.add(Calendar.MONTH, 1);// 加一个月
+				// 处理支出偏差
+				String deviation = "0.0";
+				if (Double.parseDouble(cvoPlanOut.getValue()) > 0) {
+					deviation = MyDBHelper.doubleDiv(cvoActualOut.getValue(), cvoPlanOut.getValue());
+					if (Double.parseDouble(deviation) == 1) {
+						deviation = "0.0";
+					}
+				}
+				cvoOutDeviation.setValue(deviation);
+			}
+
+			// 累积结余
+			String surplusCount = "0";
+			for (CellVO cvoSurplusMonth : tvoCount.get("surplusMonth").toCellVOs()) {
+				String yearMonth = cvoSurplusMonth.getKey();
+				CellVO cvoSurplusCount = this.generaledger_getCellVO(tvoCount, "surplusCount", yearMonth); //累积结余
+
+				// 加总结余
+				surplusCount = MyDBHelper.doubleAdd(surplusCount, cvoSurplusMonth.getValue());
+				cvoSurplusCount.setValue(surplusCount);
+			}
+
+			// 累积结余(现金)
+			String surplusCash = "0";
+			for (CellVO cvoSurplusMonthCash : tvoCount.get("surplusMonthCash").toCellVOs()) {
+				String yearMonth = cvoSurplusMonthCash.getKey();
+				CellVO cvoSurplusCash = this.generaledger_getCellVO(tvoCount, "surplusCash", yearMonth); //累积结余(现金)
+
+				// 加总结余
+				surplusCash = MyDBHelper.doubleAdd(surplusCash, cvoSurplusMonthCash.getValue());
+				cvoSurplusCash.setValue(surplusCash);
 			}
 
 			/*
@@ -485,16 +406,18 @@ public class HomeController {
 			/*
 			 * 处理页面上的内容显示
 			 */
-			rvoPlanOut.addCellVO(new CellVO("type", "<span style='font-weight:bold;color:red;'>计划支出</span>"));
-			rvoActualOut.addCellVO(new CellVO("type", "<span style='font-weight:bold;color:red;'>实际支出</span>"));
-			rvoOutDeviation.addCellVO(new CellVO("type", "<span style='font-weight:bold;color:blue;'>支出偏差</span>"));
-			rvoPlanIn.addCellVO(new CellVO("type", "<span style='font-weight:bold;color:green;'>计划收入</span>"));
-			rvoActualIn.addCellVO(new CellVO("type", "<span style='font-weight:bold;color:green;'>实际收入</span>"));
-			rvoPlanInCash.addCellVO(new CellVO("type", "<span style='font-weight:bold;color:green;'>计划现金收入</span>"));
-			rvoActualInCash.addCellVO(new CellVO("type", "<span style='font-weight:bold;color:green;'>实际现金收入</span>"));
-			rvoSurplusMonth.addCellVO(new CellVO("type", "<span style='font-weight:bold;color:purple;'>当月结余</span>"));
-			rvoSurplusCount.addCellVO(new CellVO("type", "<span style='font-weight:bold;color:purple;'>累积结余</span>"));
-			rvoSurplusCash.addCellVO(new CellVO("type", "<span style='font-weight:bold;color:purple;'>现金结余</span>"));
+			tvoCount.changeRowVOIndex(tvoCount.get("outDeviation"), 2);
+
+			this.generaledger_getCellVO(tvoCount, "planOut", "type").setValue("<span style='font-weight:bold;color:red;'>计划支出</span>");
+			this.generaledger_getCellVO(tvoCount, "actualOut", "type").setValue("<span style='font-weight:bold;color:red;'>实际支出</span>");
+			this.generaledger_getCellVO(tvoCount, "outDeviation", "type").setValue("<span style='font-weight:bold;color:blue;'>支出偏差</span>");
+			this.generaledger_getCellVO(tvoCount, "planIn", "type").setValue("<span style='font-weight:bold;color:green;'>计划收入</span>");
+			this.generaledger_getCellVO(tvoCount, "actualIn", "type").setValue("<span style='font-weight:bold;color:green;'>实际收入</span>");
+			this.generaledger_getCellVO(tvoCount, "surplusMonth", "type").setValue("<span style='font-weight:bold;color:purple;'>当月结余</span>");
+			this.generaledger_getCellVO(tvoCount, "surplusMonthCash", "type").setValue("<span style='font-weight:bold;color:purple;'>当月结余(现金)</span>");
+			this.generaledger_getCellVO(tvoCount, "surplusCount", "type").setValue("<span style='font-weight:bold;color:purple;'>累积结余</span>");
+			this.generaledger_getCellVO(tvoCount, "surplusCash", "type").setValue("<span style='font-weight:bold;color:purple;'>累积结余(现金)</span>");
+
 			for (RowVO rvo : tvoCount.toRowVOs()) {
 				String type = rvo.getCellVOValue("type");
 				if (type.contains("计划支出") || type.contains("实际支出") || type.contains("计划收入") || type.contains("实际收入")) {
@@ -507,21 +430,27 @@ public class HomeController {
 						typeKey = "planIn";
 					} else if (type.contains("实际收入")) {
 						typeKey = "actualIn";
+					}
+					for (CellVO cvo : rvo.toCellVOs()) {
+						if (StringUtils.equals("type", cvo.getKey())) {
+							continue;
+						}
+						cvo.setValue("<div style='height: 100%;cursor:pointer;border-bottom: 1px dashed blue;' onclick=\"modifyDetailData('" + typeKey + "','" + cvo.hashCode()
+								+ "')\">" + cvo.getValue() + "</div>");
+					}
+				} else if (type.contains("当月结余") || type.contains("当月结余(现金)")) {
+					String typeKey = "";
+					if (type.contains("当月结余(现金)")) {
+						typeKey = "当月结余(现金)";
 					} else if (type.contains("当月结余")) {
-						typeKey = "surplusMonth";
+						typeKey = "当月结余";
 					}
 					for (CellVO cvo : rvo.toCellVOs()) {
 						if (StringUtils.equals("type", cvo.getKey())) {
 							continue;
 						}
-						cvo.setValue("<div style='height: 100%;cursor:pointer;border-bottom: 1px dashed blue;' onclick=\"modifyDetailData('" + typeKey + "','" + cvo.getKey() + "')\">" + cvo.getValue() + "</div>");
-					}
-				} else if (type.contains("当月结余")) {
-					for (CellVO cvo : rvo.toCellVOs()) {
-						if (StringUtils.equals("type", cvo.getKey())) {
-							continue;
-						}
-						cvo.setValue("<div style='height: 100%;cursor:pointer;border-bottom: 1px dashed blue;' onclick=\"surplusMonthDetail('" + cvo.getKey() + "')\">" + cvo.getValue() + "</div>");
+						cvo.setValue("<div style='height: 100%;cursor:pointer;border-bottom: 1px dashed blue;' onclick=\"surplusMonthDetail('" + typeKey + "','" + cvo.hashCode()
+								+ "')\">" + cvo.getValue() + "</div>");
 					}
 				}
 			}
@@ -535,15 +464,63 @@ public class HomeController {
 		return mv;
 	}
 
+	private RowVO generaledger_buildDataRowVO(String id, String planFlag, String createDate, String typeId, String amount, String isIncome, String typeName, String desc) {
+		RowVO rvoData = new RowVO();
+		rvoData.addCellVO(new CellVO("id", id));// 如果有实际记录,则传入ID
+		rvoData.addCellVO(new CellVO("planFlag", planFlag));// 是为计划支出,否为实际支出
+		rvoData.addCellVO(new CellVO("createDate", createDate));// 创建日期
+		rvoData.addCellVO(new CellVO("typeId", typeId));// 收支类型
+		rvoData.addCellVO(new CellVO("typeName", typeName));// 收支类型
+		rvoData.addCellVO(new CellVO("amount", amount));// 金额
+		rvoData.addCellVO(new CellVO("isIncome", isIncome));// 是否为收入
+		rvoData.addCellVO(new CellVO("desc", desc));// 描述
+		return rvoData;
+	}
+
+	private CellVO generaledger_getCellVO(TableVO tvo, String rowVOKey, String cellVOkey) {
+		RowVO rvo = tvo.get(rowVOKey);
+		if (rvo == null) {
+			rvo = new RowVO(rowVOKey);
+			tvo.addRowVO(rvo);
+		}
+		CellVO cvo = rvo.get(cellVOkey);
+		if (cvo == null) {
+			cvo = new CellVO(cellVOkey, "0");
+			rvo.addCellVO(cvo);
+		}
+		return cvo;
+	}
+
+	private void generaledger_countCalculate(DataVO dvoCountDetail, CellVO cvoCount, RowVO rvoData, boolean isPlus) {
+		String amount = rvoData.getCellVOValue("amount");
+
+		// 汇总金额
+		if (isPlus) {
+			cvoCount.setValue(MyDBHelper.doubleAdd(cvoCount.getValue(), amount));// + 
+		} else {
+			cvoCount.setValue(MyDBHelper.doubleSub(cvoCount.getValue(), amount));// - 
+		}
+
+		// 处理当前CellVO的汇总明细
+		String cellVOHashCode = String.valueOf(cvoCount.hashCode());
+		TableVO tvoCountDetial = dvoCountDetail.getTableVO(cellVOHashCode);
+		if (tvoCountDetial == null) {
+			tvoCountDetial = new TableVO(cellVOHashCode);
+			dvoCountDetail.addTableVO(tvoCountDetial);
+		}
+		tvoCountDetial.addRowVO(rvoData);
+	}
+
 	/**
 	 * 总账页面 - 明细维护页
+	 * 
 	 * @return
 	 */
 	@RequestMapping(value = "/generaledger/modifyDetailData", method = RequestMethod.GET)
 	public ModelAndView generaledger_modifyDetailData(HttpServletRequest request) {
 		try {
-			SimpleDateFormat sdf_date = new SimpleDateFormat("yyyyMMdd");
-			long currentTime_long = System.currentTimeMillis();
+			SimpleDateFormat sdf_date = new SimpleDateFormat("yyyyMM");
+			String cvoHashCode = request.getParameter("cvoHashCode");// 当前Cell的HashCode,通过HashCode从dvoCountDetail读取对应的明细数据
 			String typeKey = request.getParameter("typeKey");// planOut | actualOut | planOut | actualOut
 			String type = "不知道";
 			if (StringUtils.equals(typeKey, "planOut")) {
@@ -557,159 +534,33 @@ public class HomeController {
 			} else if (StringUtils.equals(typeKey, "surplusMonth")) {
 				type = "<span style='font-weight:bold;color:purple;'>当月结余</span>";
 			}
-			String yearMonth = request.getParameter("yearMonth"); // yyyyMM
+			String yearMonth = ""; // yyyyMM
 
-			request.setAttribute("yearMonth", yearMonth);
 			request.setAttribute("type", type);
 
-			// 读取所有的支出类型
-			TableVO tvoExpenditureType = this.baseDAO.queryForTableVO("tn_expenditure_type");
-			// 读取所有的收入类型
-			TableVO tvoIncomeType = this.baseDAO.queryForTableVO("tn_income_type");
-			HashMap<String, String> hmTypeIdToName = tvoExpenditureType.toHashMapOfToCellVOValue("CN_ID", "CN_NAME");
-			hmTypeIdToName.putAll(tvoIncomeType.toHashMapOfToCellVOValue("CN_ID", "CN_NAME"));
+			TableVO tvoCountDetail = dvoCountDetail.getTableVO(cvoHashCode);
 
+			// 处理页面显示的TableVO
 			TableVO tvoReturn = new TableVO();
-			if (StringUtils.equals("planOut", typeKey) || StringUtils.equals("actualOut", typeKey)) {
-				// 支出 - 有记录
-				CondSetBean csb = new CondSetBean();
-				csb.addCondBean_between("CN_CREATE_DATE", MyDBHelper.getFirstDayOfMonth(yearMonth, "yyyyMM"), MyDBHelper.getLastDayOfMonth(yearMonth, "yyyyMM"));
-				if (StringUtils.equals("planOut", typeKey)) {
-					csb.addCondBean_and_equal("CR_PLAN_FLAG", Definition.YES);
-				} else {
-					csb.addCondBean_and_equal("CR_PLAN_FLAG", Definition.NO);
-				}
-				TableVO tvoExpenditure = this.baseDAO.queryForTableVO("tn_expenditure", csb);
-				HashSet<String> hsExistTypeId = new HashSet<String>();
-				for (RowVO rvo : tvoExpenditure.toRowVOs()) {
-					String id = rvo.getCellVOValue("CN_ID");
-					String typeId = rvo.getCellVOValue("CR_EXPENDITURE_TYPE_ID");
-					String amount = rvo.getCellVOValue("CN_AMOUNT");
-					String createDate = rvo.getCellVOValue("CN_CREATE_DATE");
-					String desc = rvo.getCellVOValue("CN_DESCRIPTION");
-					String typeName = hmTypeIdToName.get(typeId);
-					hsExistTypeId.add(typeId);
+			for (RowVO rvoCountDetail : tvoCountDetail.toRowVOs()) {
+				String id = rvoCountDetail.getCellVOValue("id"); // 实际记录的ID,可能为空
+				String createDate = rvoCountDetail.getCellVOValue("createDate"); // 创建日期
+				String typeName = rvoCountDetail.getCellVOValue("typeName"); // 收支类型
+				String amount = rvoCountDetail.getCellVOValue("amount"); // 金额
+				String desc = rvoCountDetail.getCellVOValue("desc");// 描述
 
-					RowVO rvoReturn = new RowVO();
-					tvoReturn.addRowVO(rvoReturn);
-					rvoReturn.addCellVO(new CellVO("id", id));
-					rvoReturn.addCellVO(new CellVO("typeName", typeName));
-					rvoReturn.addCellVO(new CellVO("amount", amount));
-					rvoReturn.addCellVO(new CellVO("createDate", createDate));
-					rvoReturn.addCellVO(new CellVO("desc", desc));
-				}
-
-				// 计划支出 - 无记录
-				if (StringUtils.equals("planOut", typeKey)) {
-					for (RowVO rvoExpenditureType : tvoExpenditureType.toRowVOs()) {
-						String periodicFlag = rvoExpenditureType.getCellVOValue("CR_PERIODIC_FLAG");// 是否为周期性支出
-						if (!StringUtils.equals(Definition.YES, periodicFlag)) {
-							continue;
-						}
-						String typeId = rvoExpenditureType.getCellVOValue("CN_ID");
-						String startDate = rvoExpenditureType.getCellVOValue("CN_START_DATE");
-						String endDate = rvoExpenditureType.getCellVOValue("CN_END_DATE");
-						if (hsExistTypeId.contains(typeId)) {
-							continue;// 过滤 - 当前类型已经生成预告记录
-						}
-						if (StringUtils.isNotEmpty(startDate) && Long.parseLong(startDate) > currentTime_long) {
-							continue;// 过滤 - 没到开始时间
-						}
-						if (StringUtils.isNotEmpty(endDate) && Long.parseLong(endDate) < currentTime_long) {
-							continue;// 过滤 - 超过结束时间
-						}
-
-						String typeName = rvoExpenditureType.getCellVOValue("CN_NAME");
-						String effectiveDay = rvoExpenditureType.getCellVOValue("CN_EFFECTIVE_DAY");
-						String amount = rvoExpenditureType.getCellVOValue("CN_AMOUNT");
-						if (Integer.parseInt(effectiveDay) < 10) {
-							effectiveDay = yearMonth + "0" + effectiveDay;
-						} else {
-							effectiveDay = yearMonth + effectiveDay;
-						}
-						if (sdf_date.parse(effectiveDay).getTime() > currentTime_long) {
-							// 将周期行预告放入返回页面,只读显示.
-							RowVO rvoReturn = new RowVO();
-							tvoReturn.addRowVO(rvoReturn);
-							rvoReturn.addCellVO(new CellVO("id", ""));
-							rvoReturn.addCellVO(new CellVO("typeName", typeName));
-							rvoReturn.addCellVO(new CellVO("amount", amount));
-							rvoReturn.addCellVO(new CellVO("createDate", "" + MyDBHelper.getDatetime(effectiveDay, "yyyyMMdd")));
-							rvoReturn.addCellVO(new CellVO("desc", ""));
-						}
-					}
-				}
-
-			} else if (StringUtils.equals("planIn", typeKey) || StringUtils.equals("actualIn", typeKey)) {
-				// 收入
-				CondSetBean csb = new CondSetBean();
-				csb.addCondBean_between("CN_CREATE_DATE", MyDBHelper.getFirstDayOfMonth(yearMonth, "yyyyMM"), MyDBHelper.getLastDayOfMonth(yearMonth, "yyyyMM"));
-				if (StringUtils.equals("planIn", typeKey)) {
-					csb.addCondBean_and_equal("CR_PLAN_FLAG", Definition.YES);
-				} else {
-					csb.addCondBean_and_equal("CR_PLAN_FLAG", Definition.NO);
-				}
-				TableVO tvoIncome = this.baseDAO.queryForTableVO("tn_income", csb);
-				HashSet<String> hsExistTypeId = new HashSet<String>();
-				for (RowVO rvo : tvoIncome.toRowVOs()) {
-					String id = rvo.getCellVOValue("CN_ID");
-					String typeId = rvo.getCellVOValue("CR_INCOME_TYPE_ID");
-					String amount = rvo.getCellVOValue("CN_AMOUNT");
-					String createDate = rvo.getCellVOValue("CN_CREATE_DATE");
-					String desc = rvo.getCellVOValue("CN_DESCRIPTION");
-					String typeName = hmTypeIdToName.get(typeId);
-					hsExistTypeId.add(typeId);
-
-					RowVO rvoReturn = new RowVO();
-					tvoReturn.addRowVO(rvoReturn);
-					rvoReturn.addCellVO(new CellVO("id", id));
-					rvoReturn.addCellVO(new CellVO("typeName", typeName));
-					rvoReturn.addCellVO(new CellVO("amount", amount));
-					rvoReturn.addCellVO(new CellVO("createDate", createDate));
-					rvoReturn.addCellVO(new CellVO("desc", desc));
-				}
-
-				// 计划收入 - 无记录
-				if (StringUtils.equals("planIn", typeKey)) {
-					for (RowVO rvoIncomeType : tvoIncomeType.toRowVOs()) {
-						String periodicFlag = rvoIncomeType.getCellVOValue("CR_PERIODIC_FLAG");// 是否为周期性收入
-						if (!StringUtils.equals(Definition.YES, periodicFlag)) {
-							continue;
-						}
-						String typeId = rvoIncomeType.getCellVOValue("CN_ID");
-						String startDate = rvoIncomeType.getCellVOValue("CN_START_DATE");
-						String endDate = rvoIncomeType.getCellVOValue("CN_END_DATE");
-						if (hsExistTypeId.contains(typeId)) {
-							continue;// 过滤 - 当前类型已经生成预告记录
-						}
-						if (StringUtils.isNotEmpty(startDate) && Long.parseLong(startDate) > currentTime_long) {
-							continue;// 过滤 - 没到开始时间
-						}
-						if (StringUtils.isNotEmpty(endDate) && Long.parseLong(endDate) < currentTime_long) {
-							continue;// 过滤 - 超过结束时间
-						}
-
-						String typeName = rvoIncomeType.getCellVOValue("CN_NAME");
-						String effectiveDay = rvoIncomeType.getCellVOValue("CN_EFFECTIVE_DAY");
-						String amount = rvoIncomeType.getCellVOValue("CN_AMOUNT");
-						if (Integer.parseInt(effectiveDay) < 10) {
-							effectiveDay = yearMonth + "0" + effectiveDay;
-						} else {
-							effectiveDay = yearMonth + effectiveDay;
-						}
-						if (sdf_date.parse(effectiveDay).getTime() > currentTime_long) {
-							// 将周期行预告放入返回页面,只读显示.
-							RowVO rvoReturn = new RowVO();
-							tvoReturn.addRowVO(rvoReturn);
-							rvoReturn.addCellVO(new CellVO("id", ""));
-							rvoReturn.addCellVO(new CellVO("typeName", typeName));
-							rvoReturn.addCellVO(new CellVO("amount", amount));
-							rvoReturn.addCellVO(new CellVO("createDate", "" + MyDBHelper.getDatetime(effectiveDay, "yyyyMMdd")));
-							rvoReturn.addCellVO(new CellVO("desc", ""));
-						}
-					}
+				RowVO rvoReturn = new RowVO();
+				tvoReturn.addRowVO(rvoReturn);
+				rvoReturn.addCellVO(new CellVO("id", id));
+				rvoReturn.addCellVO(new CellVO("typeName", typeName));
+				rvoReturn.addCellVO(new CellVO("amount", amount));
+				rvoReturn.addCellVO(new CellVO("createDate", createDate));
+				rvoReturn.addCellVO(new CellVO("desc", desc));
+				if (StringUtils.isEmpty(yearMonth)) {
+					yearMonth = sdf_date.format(new Date(Long.parseLong(createDate)));
 				}
 			}
+			request.setAttribute("yearMonth", yearMonth);
 
 			// 排序
 			tvoReturn.sortByColumn(new Sort("createDate"), new Sort("typeName"));
@@ -742,6 +593,7 @@ public class HomeController {
 
 	/**
 	 * 总账页面 - 明细维护页 - 删除
+	 * 
 	 * @return
 	 */
 	@RequestMapping(value = "/generaledger/modifyDetailData/delete", method = RequestMethod.POST)
@@ -761,6 +613,7 @@ public class HomeController {
 
 	/**
 	 * 总账页面 - 明细维护页 - 保存
+	 * 
 	 * @return
 	 */
 	@RequestMapping(value = "/generaledger/modifyDetailData/save", method = RequestMethod.POST)
@@ -786,6 +639,7 @@ public class HomeController {
 
 	/**
 	 * 总账页面 - 新增收支
+	 * 
 	 * @return
 	 */
 	@RequestMapping(value = "/generaledger/newDetailData", method = RequestMethod.GET)
@@ -819,6 +673,7 @@ public class HomeController {
 
 	/**
 	 * 总账页面 - 新增收支 - 保存
+	 * 
 	 * @return
 	 */
 	@RequestMapping(value = "/generaledger/newDetailData/save", method = RequestMethod.POST)
@@ -858,222 +713,61 @@ public class HomeController {
 
 	/**
 	 * 总账页面 - 当月结余明细页
+	 * 
 	 * @return
 	 */
 	@RequestMapping(value = "/generaledger/surplusMonthDetail", method = RequestMethod.GET)
 	public ModelAndView generaledger_surplusMonthDetail(HttpServletRequest request) {
 		try {
-			SimpleDateFormat sdf_date = new SimpleDateFormat("yyyyMMdd");
-			long currentTime_long = System.currentTimeMillis();
-			String type = "<span style='font-weight:bold;color:purple;'>当月结余</span>";
-			String yearMonth = request.getParameter("yearMonth"); // yyyyMM
-			request.setAttribute("yearMonth", yearMonth);
-			request.setAttribute("type", type);
+			SimpleDateFormat sdf_date = new SimpleDateFormat("yyyyMM");
+			String typeKey = request.getParameter("typeKey");
+			String cvoHashCode = request.getParameter("cvoHashCode");// 当前Cell的HashCode,通过HashCode从dvoCountDetail读取对应的明细数据
 
-			// 读取所有的支出类型
-			TableVO tvoExpenditureType = this.baseDAO.queryForTableVO("tn_expenditure_type");
-			// 读取所有的收入类型
-			TableVO tvoIncomeType = this.baseDAO.queryForTableVO("tn_income_type");
-			HashMap<String, String> hmTypeIdToName = tvoExpenditureType.toHashMapOfToCellVOValue("CN_ID", "CN_NAME");
-			hmTypeIdToName.putAll(tvoIncomeType.toHashMapOfToCellVOValue("CN_ID", "CN_NAME"));
+			String type = "<span style='font-weight:bold;color:purple;'>" + typeKey + "</span>";
+			String yearMonth = "";
+			TableVO tvoCountDetail = dvoCountDetail.getTableVO(cvoHashCode);
 
-			TableVO tvoMonthRecord = new TableVO();// 当月的收支记录集合
-			// 支出 - 有记录
-			CondSetBean csbExpenditure = new CondSetBean();
-			csbExpenditure.addCondBean_between("CN_CREATE_DATE", MyDBHelper.getFirstDayOfMonth(yearMonth, "yyyyMM"), MyDBHelper.getLastDayOfMonth(yearMonth, "yyyyMM"));
-
-			TableVO tvoExpenditure = this.baseDAO.queryForTableVO("tn_expenditure", csbExpenditure);
-			HashSet<String> hsExistTypeId = new HashSet<String>();
-			for (RowVO rvo : tvoExpenditure.toRowVOs()) {
-				String planFlag = rvo.getCellVOValue("CR_PLAN_FLAG");
-				String typeId = rvo.getCellVOValue("CR_EXPENDITURE_TYPE_ID");
-				String amount = rvo.getCellVOValue("CN_AMOUNT");
-				String createDate = rvo.getCellVOValue("CN_CREATE_DATE");
-				String desc = rvo.getCellVOValue("CN_DESCRIPTION");
-				String typeName = hmTypeIdToName.get(typeId);
-				hsExistTypeId.add(typeId);
-
-				RowVO rvoMonthRecord = new RowVO();
-				tvoMonthRecord.addRowVO(rvoMonthRecord);
-				rvoMonthRecord.addCellVO(new CellVO("planFlag", planFlag));
-				rvoMonthRecord.addCellVO(new CellVO("typeName", typeName));
-				rvoMonthRecord.addCellVO(new CellVO("amount", amount));
-				rvoMonthRecord.addCellVO(new CellVO("createDate", createDate));
-				rvoMonthRecord.addCellVO(new CellVO("desc", desc));
-				rvoMonthRecord.addCellVO(new CellVO("inOut", "<span style='font-weight:bold;color:red;'>支出</span>"));
-			}
-
-			// 计划支出 - 无记录
-			for (RowVO rvoExpenditureType : tvoExpenditureType.toRowVOs()) {
-				String periodicFlag = rvoExpenditureType.getCellVOValue("CR_PERIODIC_FLAG");// 是否为周期性支出
-				if (!StringUtils.equals(Definition.YES, periodicFlag)) {
-					continue;
-				}
-				String typeId = rvoExpenditureType.getCellVOValue("CN_ID");
-				String startDate = rvoExpenditureType.getCellVOValue("CN_START_DATE");
-				String endDate = rvoExpenditureType.getCellVOValue("CN_END_DATE");
-				if (hsExistTypeId.contains(typeId)) {
-					continue;// 过滤 - 当前类型已经生成预告记录
-				}
-				if (StringUtils.isNotEmpty(startDate) && Long.parseLong(startDate) > currentTime_long) {
-					continue;// 过滤 - 没到开始时间
-				}
-				if (StringUtils.isNotEmpty(endDate) && Long.parseLong(endDate) < currentTime_long) {
-					continue;// 过滤 - 超过结束时间
-				}
-
-				String typeName = rvoExpenditureType.getCellVOValue("CN_NAME");
-				String effectiveDay = rvoExpenditureType.getCellVOValue("CN_EFFECTIVE_DAY");
-				String amount = rvoExpenditureType.getCellVOValue("CN_AMOUNT");
-				if (Integer.parseInt(effectiveDay) < 10) {
-					effectiveDay = yearMonth + "0" + effectiveDay;
-				} else {
-					effectiveDay = yearMonth + effectiveDay;
-				}
-				if (sdf_date.parse(effectiveDay).getTime() > currentTime_long) {
-					// 将周期行预告放入返回页面,只读显示.
-					RowVO rvoMonthRecord = new RowVO();
-					tvoMonthRecord.addRowVO(rvoMonthRecord);
-					rvoMonthRecord.addCellVO(new CellVO("planFlag", Definition.YES));
-					rvoMonthRecord.addCellVO(new CellVO("typeName", typeName));
-					rvoMonthRecord.addCellVO(new CellVO("amount", amount));
-					rvoMonthRecord.addCellVO(new CellVO("createDate", "" + MyDBHelper.getDatetime(effectiveDay, "yyyyMMdd")));
-					rvoMonthRecord.addCellVO(new CellVO("desc", "计划支出 - 无记录"));
-					rvoMonthRecord.addCellVO(new CellVO("inOut", "<span style='font-weight:bold;color:red;'>支出</span>"));
-				}
-			}
-
-			// 收入
-			CondSetBean csbIncome = new CondSetBean();
-			csbIncome.addCondBean_between("CN_CREATE_DATE", MyDBHelper.getFirstDayOfMonth(yearMonth, "yyyyMM"), MyDBHelper.getLastDayOfMonth(yearMonth, "yyyyMM"));
-			TableVO tvoIncome = this.baseDAO.queryForTableVO("tn_income", csbIncome);
-			for (RowVO rvo : tvoIncome.toRowVOs()) {
-				String planFlag = rvo.getCellVOValue("CR_PLAN_FLAG");
-				String typeId = rvo.getCellVOValue("CR_INCOME_TYPE_ID");
-				String amount = rvo.getCellVOValue("CN_AMOUNT");
-				String createDate = rvo.getCellVOValue("CN_CREATE_DATE");
-				String desc = rvo.getCellVOValue("CN_DESCRIPTION");
-				String typeName = hmTypeIdToName.get(typeId);
-				hsExistTypeId.add(typeId);
-
-				RowVO rvoMonthRecord = new RowVO();
-				tvoMonthRecord.addRowVO(rvoMonthRecord);
-				rvoMonthRecord.addCellVO(new CellVO("planFlag", planFlag));
-				rvoMonthRecord.addCellVO(new CellVO("typeName", typeName));
-				rvoMonthRecord.addCellVO(new CellVO("amount", amount));
-				rvoMonthRecord.addCellVO(new CellVO("createDate", createDate));
-				rvoMonthRecord.addCellVO(new CellVO("desc", desc));
-				rvoMonthRecord.addCellVO(new CellVO("inOut", "<span style='font-weight:bold;color:green;'>收入</span>"));
-			}
-
-			// 计划收入 - 无记录
-			for (RowVO rvoIncomeType : tvoIncomeType.toRowVOs()) {
-				String periodicFlag = rvoIncomeType.getCellVOValue("CR_PERIODIC_FLAG");// 是否为周期性收入
-				if (!StringUtils.equals(Definition.YES, periodicFlag)) {
-					continue;
-				}
-				String typeId = rvoIncomeType.getCellVOValue("CN_ID");
-				String startDate = rvoIncomeType.getCellVOValue("CN_START_DATE");
-				String endDate = rvoIncomeType.getCellVOValue("CN_END_DATE");
-				if (hsExistTypeId.contains(typeId)) {
-					continue;// 过滤 - 当前类型已经生成预告记录
-				}
-				if (StringUtils.isNotEmpty(startDate) && Long.parseLong(startDate) > currentTime_long) {
-					continue;// 过滤 - 没到开始时间
-				}
-				if (StringUtils.isNotEmpty(endDate) && Long.parseLong(endDate) < currentTime_long) {
-					continue;// 过滤 - 超过结束时间
-				}
-
-				String typeName = rvoIncomeType.getCellVOValue("CN_NAME");
-				String effectiveDay = rvoIncomeType.getCellVOValue("CN_EFFECTIVE_DAY");
-				String amount = rvoIncomeType.getCellVOValue("CN_AMOUNT");
-				if (Integer.parseInt(effectiveDay) < 10) {
-					effectiveDay = yearMonth + "0" + effectiveDay;
-				} else {
-					effectiveDay = yearMonth + effectiveDay;
-				}
-				if (sdf_date.parse(effectiveDay).getTime() > currentTime_long) {
-					// 将周期行预告放入返回页面,只读显示.
-					RowVO rvoMonthRecord = new RowVO();
-					tvoMonthRecord.addRowVO(rvoMonthRecord);
-					rvoMonthRecord.addCellVO(new CellVO("planFlag", Definition.YES));
-					rvoMonthRecord.addCellVO(new CellVO("typeName", typeName));
-					rvoMonthRecord.addCellVO(new CellVO("amount", amount));
-					rvoMonthRecord.addCellVO(new CellVO("createDate", "" + MyDBHelper.getDatetime(effectiveDay, "yyyyMMdd")));
-					rvoMonthRecord.addCellVO(new CellVO("desc", "计划收入 - 无记录"));
-					rvoMonthRecord.addCellVO(new CellVO("inOut", "<span style='font-weight:bold;color:green;'>收入</span>"));
-				}
-			}
-
+			// 处理页面显示的TableVO
 			TableVO tvoReturn = new TableVO();
-			/*
-			 *  将实际收支加入返回Table
-			 */
-			if (tvoMonthRecord.toHashMapOfToArrayRowVO("planFlag").containsKey(Definition.NO)) {
-				for (RowVO rvo : tvoMonthRecord.toHashMapOfToArrayRowVO("planFlag").get(Definition.NO)) {
-					String typeName = rvo.getCellVOValue("typeName");
-					String amount = rvo.getCellVOValue("amount");
-					String createDate = rvo.getCellVOValue("createDate");
-					String desc = rvo.getCellVOValue("desc");
-					String inOut = rvo.getCellVOValue("inOut");
+			for (RowVO rvoCountDetail : tvoCountDetail.toRowVOs()) {
+				String planFlag = rvoCountDetail.getCellVOValue("planFlag"); // 是为计划支出,否为实际支出
+				String createDate = rvoCountDetail.getCellVOValue("createDate"); // 创建日期
+				String typeName = rvoCountDetail.getCellVOValue("typeName"); // 收支类型
+				String amount = rvoCountDetail.getCellVOValue("amount"); // 金额
+				String isIncome = rvoCountDetail.getCellVOValue("isIncome"); // 是否为收入
+				String desc = rvoCountDetail.getCellVOValue("desc");// 描述
 
-					RowVO rvoReturn = new RowVO();
-					tvoReturn.addRowVO(rvoReturn);
-					rvoReturn.addCellVO(new CellVO("typeName", typeName));
-					rvoReturn.addCellVO(new CellVO("createDate", createDate));
-					rvoReturn.addCellVO(new CellVO("inOut", inOut));
-					rvoReturn.addCellVO(new CellVO("amount_actual", amount));
-					rvoReturn.addCellVO(new CellVO("amount_plan", "N/A"));
-					rvoReturn.addCellVO(new CellVO("desc", desc));
+				if (StringUtils.equals(planFlag, Definition.YES)) {
+					planFlag = "<span style='font-weight:bold;color:purple;'>" + "计划" + "</span>";
+				} else {
+					planFlag = "实际";
+				}
+				if (StringUtils.equals(isIncome, Definition.YES)) {
+					isIncome = "<span style='font-weight:bold;color:green;'>" + "收入" + "</span>";
+				} else {
+					isIncome = "<span style='font-weight:bold;color:red;'>" + "支出" + "</span>";
+				}
+
+				RowVO rvoReturn = new RowVO();
+				tvoReturn.addRowVO(rvoReturn);
+				rvoReturn.addCellVO(new CellVO("typeName", typeName));
+				rvoReturn.addCellVO(new CellVO("createDate", createDate));
+				rvoReturn.addCellVO(new CellVO("inOut", isIncome));
+				rvoReturn.addCellVO(new CellVO("amount", amount));
+				rvoReturn.addCellVO(new CellVO("planOrActual", planFlag));
+				rvoReturn.addCellVO(new CellVO("desc", desc));
+				if (StringUtils.isEmpty(yearMonth)) {
+					yearMonth = sdf_date.format(new Date(Long.parseLong(createDate)));
 				}
 			}
-			/*
-			 *  处理计划支出
-			 *  	1. 将有对应实际支出类型的,将计划对应到差异较小的实际记录上
-			 *  	2. 如果没有对应的实际,则生成一条新的返回记录.实际为''.
-			 */
-			HashMap<String, ArrayList<RowVO>> hmTypeToActualRowVOArray = tvoReturn.toHashMapOfToArrayRowVO("typeName");// 记录类型对应的实际记录
-			if (tvoMonthRecord.toHashMapOfToArrayRowVO("planFlag").containsKey(Definition.YES)) {
-				for (RowVO rvo : tvoMonthRecord.toHashMapOfToArrayRowVO("planFlag").get(Definition.YES)) {
-					String typeName = rvo.getCellVOValue("typeName");
-					String amount = rvo.getCellVOValue("amount");
-					String createDate = rvo.getCellVOValue("createDate");
-					String desc = rvo.getCellVOValue("desc");
-					String inOut = rvo.getCellVOValue("inOut");
 
-					if (hmTypeToActualRowVOArray.containsKey(typeName)) {
-						double min = 999999999;
-						for (RowVO rvoReturn : hmTypeToActualRowVOArray.get(typeName)) {
-							double t = Math.abs(Double.parseDouble(MyDBHelper.doubleSub(rvoReturn.getCellVOValue("amount_actual"), amount)));
-							if (t < min) {
-								min = t;
-							}
-						}
-						for (RowVO rvoReturn : hmTypeToActualRowVOArray.get(typeName)) {
-							double t = Math.abs(Double.parseDouble(MyDBHelper.doubleSub(rvoReturn.getCellVOValue("amount_actual"), amount)));
-							if (t == min) {
-								rvoReturn.setCellVOValue("amount_plan", amount);
-							}
-						}
-
-					} else {
-						RowVO rvoReturn = new RowVO();
-						tvoReturn.addRowVO(rvoReturn);
-						rvoReturn.addCellVO(new CellVO("typeName", typeName));
-						rvoReturn.addCellVO(new CellVO("createDate", createDate));
-						rvoReturn.addCellVO(new CellVO("inOut", inOut));
-						rvoReturn.addCellVO(new CellVO("amount_actual", "N/A"));
-						rvoReturn.addCellVO(new CellVO("amount_plan", amount));
-						rvoReturn.addCellVO(new CellVO("desc", desc));
-					}
-				}
-			}
 			// 排序
 			tvoReturn.sortByColumn(new Sort("createDate"), new Sort("inOut"), new Sort("typeName"));
 			tvoReturn.formatDate("yyyy-MM-dd", "createDate");
 
 			request.setAttribute("tvoReturn", tvoReturn);
+			request.setAttribute("yearMonth", yearMonth);
+			request.setAttribute("type", type);
 
 		} catch (Exception e) {
 			e.printStackTrace();
