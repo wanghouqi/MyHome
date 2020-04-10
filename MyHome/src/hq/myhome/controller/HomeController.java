@@ -539,6 +539,9 @@ public class HomeController {
 			request.setAttribute("type", type);
 
 			TableVO tvoCountDetail = dvoCountDetail.getTableVO(cvoHashCode);
+			if(tvoCountDetail == null) {
+				tvoCountDetail = new TableVO();
+			}
 
 			// 处理页面显示的TableVO
 			TableVO tvoReturn = new TableVO();
