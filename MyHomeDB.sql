@@ -1,8 +1,8 @@
 -- --------------------------------------------------------
 -- 主机:                           y23141394i.imwork.net
--- 服务器版本:                        10.3.7-MariaDB - Source distribution
+-- 服务器版本:                        10.3.21-MariaDB - Source distribution
 -- 服务器操作系统:                      Linux
--- HeidiSQL 版本:                  9.4.0.5125
+-- HeidiSQL 版本:                  10.2.0.5646
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -23,12 +23,14 @@ CREATE TABLE IF NOT EXISTS `tl_boolean` (
   PRIMARY KEY (`CN_ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='部位类型,记录是|否';
 
+
 -- 正在导出表  myhome.tl_boolean 的数据：~2 rows (大约)
 /*!40000 ALTER TABLE `tl_boolean` DISABLE KEYS */;
 INSERT INTO `tl_boolean` (`CN_ID`, `CN_NAME`) VALUES
 	('no', 'no'),
 	('yes', 'yes');
 /*!40000 ALTER TABLE `tl_boolean` ENABLE KEYS */;
+
 
 -- 导出  表 myhome.tn_debit_and_credit 结构
 CREATE TABLE IF NOT EXISTS `tn_debit_and_credit` (
@@ -43,6 +45,7 @@ CREATE TABLE IF NOT EXISTS `tn_debit_and_credit` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='借贷表,记录借出和借入的账目';
 
 -- 数据导出被取消选择。
+
 -- 导出  表 myhome.tn_expenditure 结构
 CREATE TABLE IF NOT EXISTS `tn_expenditure` (
   `CN_ID` varchar(32) NOT NULL,
@@ -59,6 +62,7 @@ CREATE TABLE IF NOT EXISTS `tn_expenditure` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='支出表,记录支出信息.';
 
 -- 数据导出被取消选择。
+
 -- 导出  表 myhome.tn_expenditure_type 结构
 CREATE TABLE IF NOT EXISTS `tn_expenditure_type` (
   `CN_ID` varchar(32) NOT NULL,
@@ -74,6 +78,18 @@ CREATE TABLE IF NOT EXISTS `tn_expenditure_type` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='支出类型';
 
 -- 数据导出被取消选择。
+
+-- 导出  表 myhome.tn_housing_fund_withdrawal 结构
+CREATE TABLE IF NOT EXISTS `tn_housing_fund_withdrawal` (
+  `CN_ID` varchar(32) NOT NULL,
+  `CN_CREATE_DATE` bigint(20) NOT NULL COMMENT '提醒日期',
+  `CN_AMOUNT` decimal(10,2) NOT NULL COMMENT '提现金额',
+  `CN_DESCRIPTION` varchar(1000) NOT NULL COMMENT '备注',
+  PRIMARY KEY (`CN_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='公积金提取表';
+
+-- 数据导出被取消选择。
+
 -- 导出  表 myhome.tn_income 结构
 CREATE TABLE IF NOT EXISTS `tn_income` (
   `CN_ID` varchar(32) NOT NULL,
@@ -90,6 +106,7 @@ CREATE TABLE IF NOT EXISTS `tn_income` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='收入表,记录收入信息.';
 
 -- 数据导出被取消选择。
+
 -- 导出  表 myhome.tn_income_type 结构
 CREATE TABLE IF NOT EXISTS `tn_income_type` (
   `CN_ID` varchar(32) NOT NULL,
@@ -106,6 +123,7 @@ CREATE TABLE IF NOT EXISTS `tn_income_type` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='收入类型';
 
 -- 数据导出被取消选择。
+
 -- 导出  表 myhome.tn_user 结构
 CREATE TABLE IF NOT EXISTS `tn_user` (
   `CN_ID` varchar(32) NOT NULL,
@@ -120,6 +138,7 @@ CREATE TABLE IF NOT EXISTS `tn_user` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户表';
 
 -- 数据导出被取消选择。
+
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
 /*!40014 SET FOREIGN_KEY_CHECKS=IF(@OLD_FOREIGN_KEY_CHECKS IS NULL, 1, @OLD_FOREIGN_KEY_CHECKS) */;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
