@@ -77,7 +77,7 @@ public class OtherController {
 			e.printStackTrace();
 		}
 
-		// 跳转到[总账页面]
+		// 跳转到[收入类型管理页面]
 		ModelAndView mv = new ModelAndView();
 		mv.setViewName("tiles.incomeType.list");
 		return mv;
@@ -127,7 +127,7 @@ public class OtherController {
 			e.printStackTrace();
 		}
 
-		// 跳转到[总账页面]
+		// 跳转到[支出类型管理页面]
 		ModelAndView mv = new ModelAndView();
 		mv.setViewName("tiles.expenditureType.list");
 		return mv;
@@ -164,7 +164,7 @@ public class OtherController {
 			e.printStackTrace();
 		}
 
-		// 跳转到[总账页面]
+		// 跳转到[借贷管理页面]
 		ModelAndView mv = new ModelAndView();
 		mv.setViewName("tiles.debitAndCredit.list");
 		return mv;

@@ -107,6 +107,8 @@ public class HomeController {
 			TableVO tvoExpenditure = this.baseDAO.queryForTableVO("tn_expenditure");
 			// 读取所有的收入记录
 			TableVO tvoIncome = this.baseDAO.queryForTableVO("tn_income");
+			// 读取所有的公积金提取记录
+			TableVO tvoHousingFundWithdrawal = this.baseDAO.queryForTableVO("tn_housing_fund_withdrawal");
 			// 读取所有的支出类型
 			TableVO tvoExpenditureType = this.baseDAO.queryForTableVO("tn_expenditure_type");
 			// 读取所有的收入类型
@@ -130,6 +132,27 @@ public class HomeController {
 					hmYearMonthToDACRowVO.put(yearMonth, al);
 				}
 			}
+			
+			/*
+			 * 处理公积金提取
+			 */
+			HashMap<String, ArrayList<RowVO>> hmYearMonthToHFW = new HashMap<String, ArrayList<RowVO>>();
+			for (RowVO rowVO : tvoHousingFundWithdrawal.toRowVOs()) {
+				String createDate = rowVO.getCellVOValue("CN_CREATE_DATE");// 创建日期
+				String yearMonth = sdf_yearMonth.format(new Date(Long.parseLong(createDate)));
+				if (hmYearMonthToHFW.containsKey(yearMonth)) {
+					hmYearMonthToHFW.get(yearMonth).add(rowVO);
+				} else {
+					ArrayList<RowVO> al = new ArrayList<RowVO>();
+					al.add(rowVO);
+					hmYearMonthToHFW.put(yearMonth, al);
+				}
+			}
+			
+			
+			
+			
+			
 			// 得到现金收入的类型
 			HashSet<String> hsCashInTypeId = tvoIncomeType.toHashMapOfToCellVOValueSet("CN_FROZEN_FLAG", "CN_ID").get(Definition.NO);
 			if (hsCashInTypeId == null) {
@@ -344,6 +367,24 @@ public class HomeController {
 						}
 					}
 					hmYearMonthToDACRowVO.remove(yearMonth);
+				}
+				
+				/*
+				 * 处理公积金提现
+				 */
+				if (hmYearMonthToHFW.containsKey(yearMonth)) {
+					for (RowVO rvoDAC : hmYearMonthToHFW.get(yearMonth)) {
+						String id = rvoDAC.getCellVOValue("CN_ID");
+						String amount = rvoDAC.getCellVOValue("CN_AMOUNT");
+						String createDate_t = rvoDAC.getCellVOValue("CN_CREATE_DATE");// 创建日期
+						String desc = rvoDAC.getCellVOValue("CN_DESCRIPTION");
+						
+
+						RowVO rvoDACData = this.generaledger_buildDataRowVO(id, Definition.NO, createDate_t, "公积金提现", amount, Definition.YES, "公积金提现", desc);
+						// 增加 - 累积(现金)
+						this.generaledger_countCalculate(dvoCountDetail, cvoSurplusMonthCash, rvoDACData, true);
+					}
+					hmYearMonthToHFW.remove(yearMonth);
 				}
 			}
 

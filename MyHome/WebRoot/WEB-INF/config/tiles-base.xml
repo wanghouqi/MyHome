@@ -48,5 +48,15 @@
 	<definition name="tiles.debitAndCredit.list" extends="tiles.base">
 		<put-attribute name="body" value="/WEB-INF/views/other/debitAndCreditList.jsp" />
 	</definition>
+	
+	
+	<!-- 公积金提现 - 列表页 -->
+	<definition name="tiles.housingFundWithdrawal.list" extends="tiles.base">
+		<put-attribute name="body" value="/WEB-INF/views/housingFundWithdrawal/list.jsp" />
+	</definition>
+	<!-- 公积金提现 - 数据维护页 -->
+	<definition name="tiles.housingFundWithdrawal.new" extends="tiles.layer">
+		<put-attribute name="body" value="/WEB-INF/views/housingFundWithdrawal/new.jsp" />
+	</definition>
 
 </tiles-definitions>  
